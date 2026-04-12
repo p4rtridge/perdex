@@ -49,7 +49,7 @@ Perdex extends ActivityPub using a custom JSON-LD namespace `https://perdex.netw
 | `mag:issueNumber` | `Chapter` | Chapter number within the comic series |
 | `mag:volumeNumber` | `Chapter` | Volume number |
 | `mag:language` | `Chapter` | ISO 639-1 language code (e.g. `"en"`, `"vi"`) |
-| `mag:views` | `Comic`, `Chapter`, `Actor` | Cumulative view count |
+| `mag:views` | `Comic`, `Chapter` | Cumulative view count |
 
 ## Supported Objects
 
@@ -82,8 +82,8 @@ Perdex extends ActivityPub using a custom JSON-LD namespace `https://perdex.netw
 
 A Perdex Actor can be:
 
-- An account (`Person`), used to publish or comment comics, report abuses or create publishing groups.
-- A publishing group (`Group`), owned by an account and also used to publish chapters. The publisher is a `Group` because we can have multiple accounts that manage the same group.
+- An account (`Person`), used to publish or comment on comics, report abuses, or create publishing groups.
+- A publishing group (`Group`), owned by an account and used to publish chapters and comics. The publisher is a `Group` because we can have multiple accounts managing the same group.
 
 When a chapter is published, the account sends a `Create` activity and the group sends an `Announce` activity, both referencing the `Chapter` object. A `Comic` object has the `attributedTo` property to know the `Person` and the `Group` that own it.
 
@@ -116,8 +116,7 @@ When a chapter is published, the account sends a `Create` activity and the group
   "followers": "https://manga.instance.tld/users/admin-alice/followers",
   "following": "https://manga.instance.tld/users/admin-alice/following",
   "comics": "https://manga.instance.tld/users/admin-alice/comics",
-  "manuallyApprovesFollowers": false,
-  "views": 1000
+  "manuallyApprovesFollowers": false
 }
 ```
 
@@ -131,8 +130,7 @@ When a chapter is published, the account sends a `Create` activity and the group
       "sc": "http://schema.org/",
       "manuallyApprovesMembers": "mag:manuallyApprovesMembers",
       "members": { "@type": "@id", "@id": "mag:members" },
-      "comics": { "@type": "@id", "@id": "mag:comics" },
-      "views": { "@type": "sc:Number", "@id": "mag:views" }
+      "comics": { "@type": "@id", "@id": "mag:comics" }
     }
   ],
   "id": "https://manga.instance.tld/groups/elyria-scans",
@@ -146,8 +144,7 @@ When a chapter is published, the account sends a `Create` activity and the group
   "members": "https://manga.instance.tld/groups/elyria-scans/members",
   "comics": "https://manga.instance.tld/groups/elyria-scans/comics",
   "attributedTo": "https://manga.instance.tld/users/admin-alice",
-  "manuallyApprovesMembers": false,
-  "views": 1000
+  "manuallyApprovesMembers": false
 }
 ```
 
@@ -313,11 +310,21 @@ Key differences from standard ActivityPub platforms:
 
 Announce flow for a joint-release:
 
-```
-Person (uploader)  →  Create(Chapter)
-Group A            →  Announce(Chapter)   ← followers of Group A are notified
-Group B            →  Announce(Chapter)   ← followers of Group B are notified
-                                            ← direct followers of the Comic are also notified (via cc)
+```mermaid
+sequenceDiagram
+    actor P as Person (uploader)
+    participant GA as Group A
+    participant GB as Group B
+    participant GAfol as Group A followers
+    participant GBfol as Group B followers
+    participant Cfol as Comic followers
+
+    P->>GA: Create(Chapter { attributedTo: [Group A, Group B] })
+    P->>GB: Create(Chapter { attributedTo: [Group A, Group B] })
+    GA-->>GAfol: Announce(Chapter)
+    GA-->>Cfol: Announce(Chapter)
+    GB-->>GBfol: Announce(Chapter)
+    GB-->>Cfol: Announce(Chapter)
 ```
 
 ### Note
@@ -502,6 +509,10 @@ Create is an activity standardized in the ActivityPub specification (see [Create
 
 Update is an activity standardized in the ActivityPub specification (see [Update Activity](https://www.w3.org/TR/activitypub/#update-activity-inbox)). The Update activity is used when updating an already existing object.
 
+**Authorization**
+- Only the **original creator** (the `Actor` who initially published the object) is authorized to send an `Update` activity for a `Comic`, `Chapter`, or `Note`.
+- Other members of the same publishing `Group` are **not** permitted to update content authored by someone else.
+
 **Supported on**
 - [Comic](#comic)
 - [Chapter](#chapter)
@@ -511,6 +522,10 @@ Update is an activity standardized in the ActivityPub specification (see [Update
 ### Delete
 
 Delete is an activity standardized in the ActivityPub specification (see [Delete Activity](https://www.w3.org/TR/activitypub/#delete-activity-outbox)).
+
+**Authorization**
+- Only the **original creator** (the `Actor` who initially published the object) is authorized to send a `Delete` activity for a `Comic`, `Chapter`, or `Note`.
+- Other members of the same publishing `Group` are **not** permitted to delete content authored by someone else.
 
 **Supported on**
 - [Comic](#comic)
@@ -557,21 +572,54 @@ Announce is an activity standardized in the ActivityPub specification (see [Anno
 
 In Perdex, a `Group` automatically sends `Announce` whenever one of its members creates a `Comic` or `Chapter` attributed to the Group. This notifies all Group followers of new content.
 
-```
-# Comic flow
-Person (group member)  →  Create(Comic  { attributedTo: Group })
-Group                  →  Announce(Comic)   ← Group followers notified of new project
+::: code-group
 
-# Chapter flow (single group)
-Person (group member)  →  Create(Chapter { attributedTo: [Group] })
-Group                  →  Announce(Chapter) ← Group followers + Comic followers notified
+```mermaid [Comic]
+sequenceDiagram
+    actor P as Person (member)
+    participant S as Server
+    participant G as Group
+    participant Gfol as Group followers
 
-# Chapter flow (joint release)
-Person (uploader)      →  Create(Chapter { attributedTo: [Group A, Group B] })
-Group A                →  Announce(Chapter) ← Group A followers notified
-Group B                →  Announce(Chapter) ← Group B followers notified
-                                             ← Comic followers notified (via cc)
+    P->>S: Create(Comic { attributedTo: Group })
+    S->>S: Validate actor ∈ Group.members
+    S-->>G: Deliver
+    G-->>Gfol: Announce(Comic)
 ```
+
+```mermaid [Chapter]
+sequenceDiagram
+    actor P as Person (member)
+    participant S as Server
+    participant G as Group
+    participant Gfol as Group followers
+    participant Cfol as Comic followers
+
+    P->>S: Create(Chapter { attributedTo: [Group] })
+    S->>S: Validate actor ∈ Group.members
+    S-->>G: Deliver
+    G-->>Gfol: Announce(Chapter)
+    G-->>Cfol: Announce(Chapter)
+```
+
+```mermaid [Chapter (Joint Release)]
+sequenceDiagram
+    actor P as Person (uploader)
+    participant GA as Group A
+    participant GB as Group B
+    participant GAfol as Group A followers
+    participant GBfol as Group B followers
+    participant Cfol as Comic followers
+
+    P->>GA: Create(Chapter { attributedTo: [A, B] })
+    P->>GB: Create(Chapter { attributedTo: [A, B] })
+    GA-->>GAfol: Announce(Chapter)
+    GA-->>Cfol: Announce(Chapter)
+    GB-->>GBfol: Announce(Chapter)
+    GB-->>Cfol: Announce(Chapter)
+```
+
+:::
 
 **Supported on**
 - [Comic](#comic)
@@ -597,7 +645,7 @@ Like is an activity standardized in the ActivityPub specification (see [Like Act
 
 ### Dislike
 
-Dislike is an activity standardized in the ActivityStream specification (see [Dislike Activity](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-dislike)).
+Dislike is an activity standardized in the ActivityStreams specification (see [Dislike Activity](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-dislike)).
 
 **Supported on**
 - [Comic](#comic)
@@ -606,9 +654,9 @@ Dislike is an activity standardized in the ActivityStream specification (see [Di
 
 ### View
 
-View is an activity standardized in the ActivityStream specification (see [View Activity](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-view)).
+View is an activity standardized in the ActivityStreams specification (see [View Activity](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-view)).
 
-A Perdex platform sends a `View` activity every time a user read a comic so the origin server can increment the comic's view counts.
+A Perdex platform sends a `View` activity every time a user reads a comic so the origin server can increment the comic's view counts.
 
 The `View` activity includes an `expires` attribute, it means a user is currently reading the comic. This kind of event is sent periodically until the user stops reading the comic. The same `View` action can be sent multiple times using a different expires attribute, meaning the user is still reading the comic.
 
@@ -626,6 +674,22 @@ Any member can upload chapters on behalf of the group once accepted.
 
 **Supported on**
 - [Actor](#actor) (targeting a `Group`)
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant G as Group
+
+    U->>G: Join
+
+    alt manuallyApprovesMembers: false
+        G-->>U: Accept(Join) [auto]
+        Note over G: User added to members
+    else manuallyApprovesMembers: true
+        Note over G: Request pending owner review
+        G-->>U: Accept(Join) or Reject(Join)
+    end
+```
 
 ::: code-group
 
