@@ -2,8 +2,8 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-    title: "MagtivityPub",
-    description: "A decentralized comic networking protocol customized from ActivityPub",
+    title: "Perdex",
+    description: "A decentralized comic platform",
     srcDir: 'docs',
     markdown: {
         theme: {
@@ -26,7 +26,7 @@ export default defineConfig({
         ],
 
         socialLinks: [
-            { icon: 'github', link: 'https://github.com/magtivitypub/magtivitypub' }
+            { icon: 'github', link: 'https://github.com/perdex-org/documentation' }
         ]
     }
 })
