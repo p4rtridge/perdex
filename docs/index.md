@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: "MagtivityPub"
+  name: "Perdex"
   text: "A Decentralized Comic Platform"
   tagline: "Document specification for federated comic publishing on the open web"
   actions:
