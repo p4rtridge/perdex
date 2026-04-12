@@ -2,11 +2,13 @@
 outline: deep
 ---
 
-# Architecture
+# Abstract Architectural Guidelines
 
 ## Introduction
 
-The digital distribution of serialized graphic literature—encompassing manga, webtoons, and traditional comic books—has historically been dominated by centralized platforms. These platforms impose stringent vendor lock-in, arbitrary content moderation policies, and unilateral algorithmic shifts that frequently disenfranchise both independent creators and collaborative scanlation communities. MagtivityPub is proposed as an open-source, decentralized, and federated publishing platform engineered specifically to mitigate these vulnerabilities. By leveraging the ActivityPub protocol, MagtivityPub establishes a resilient, peer-to-peer web of interoperable comic hosting instances, ensuring that data ownership remains with the creators and communities that generate it.
+The digital distribution of serialized graphic literature—encompassing manga, webtoons, and traditional comic books—has historically been dominated by centralized platforms. These platforms impose stringent vendor lock-in, arbitrary content moderation policies, and unilateral algorithmic shifts that frequently disenfranchise both independent creators and collaborative scanlation communities.
+
+MagtivityPub is proposed as an open-source, decentralized, and federated publishing platform engineered specifically to mitigate these vulnerabilities. By leveraging the ActivityPub protocol, MagtivityPub establishes a resilient, peer-to-peer web of interoperable comic hosting instances, ensuring that data ownership remains with the creators and communities that generate it.
 
 ### Vocabulary
 
@@ -68,3 +70,21 @@ Federation between MagtivityPub servers relies on exchanging strict `application
 To optimize bandwidth across the Fediverse and mitigate origin server failure during highly anticipated chapter releases, MagtivityPub implements a cache instance mechanism. The instance administrator can choose between multiple redundancy strategies (e.g., caching trending comics or recently uploaded chapters), configure minimum duplication lifetimes, and set their maximum cache storage size.
 
 ## Client
+
+### Architectural Requirements
+
+The client is a standalone application that interacts with the backend exclusively through the C2S HTTP APIs. It handles state management, persistent user sessions, and localized caching for offline reading.
+
+### Logical Component Structure
+
+The client logic organizes into strictly defined functional modules:
+
+- `Accounts/Profiles`: Component handling instance information, reading history, and bookmark tracking.
+- `Reader Interface`: The core sequential image viewer, chapter navigation, and progression logic.
+- `Group Administration`: Publishing group administration interfaces, metadata editing, and collaborative tools.
+
+### Concepts
+
+#### The MagtivityPub Reader
+
+The core client reader component dynamically parses the arrays of `Link` objects embedded within a Chapter's ActivityPub payload. It negotiates the optimal image format based on client bandwidth and natively decodes blurhash strings to render `low-fidelity` placeholders instantly while high-resolution assets download.

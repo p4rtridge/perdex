@@ -7,14 +7,14 @@ hero:
   tagline: "Protocol specification for federated manga publishing on the open web"
   actions:
     - theme: brand
+      text: ActivityPub
+      link: /activitypub
+    - theme: alt
       text: Architecture
       link: /architecture
     - theme: alt
       text: REST API
       link: /rest-api
-    - theme: alt
-      text: ActivityPub
-      link: /activitypub
 
 features:
   - title: Architecture
