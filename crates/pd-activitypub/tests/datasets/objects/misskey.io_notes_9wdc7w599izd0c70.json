@@ -1,0 +1,56 @@
+{
+    "@context": [
+        "https://www.w3.org/ns/activitystreams",
+        "https://w3id.org/security/v1",
+        {
+            "Key": "sec:Key",
+            "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
+            "sensitive": "as:sensitive",
+            "Hashtag": "as:Hashtag",
+            "quoteUrl": "as:quoteUrl",
+            "toot": "http://joinmastodon.org/ns#",
+            "Emoji": "toot:Emoji",
+            "featured": "toot:featured",
+            "discoverable": "toot:discoverable",
+            "schema": "http://schema.org#",
+            "PropertyValue": "schema:PropertyValue",
+            "value": "schema:value",
+            "misskey": "https://misskey-hub.net/ns#",
+            "_misskey_content": "misskey:_misskey_content",
+            "_misskey_quote": "misskey:_misskey_quote",
+            "_misskey_reaction": "misskey:_misskey_reaction",
+            "_misskey_votes": "misskey:_misskey_votes",
+            "_misskey_summary": "misskey:_misskey_summary",
+            "isCat": "misskey:isCat",
+            "vcard": "http://www.w3.org/2006/vcard/ns#"
+        }
+    ],
+    "id": "https://misskey.io/notes/9wdc7w599izd0c70",
+    "type": "Note",
+    "attributedTo": "https://misskey.io/users/7rkrarq81i",
+    "content": "<p><span>Misskey v2024.7.0 is out now!!<br></span><a href=\"https://misskey-hub.net/ja/docs/releases/\">リリースノート</a><span><br><br>開発に貢献してくださった方々、ベータ版をテストしてくださった方々、いつも支援してくださっている方々に感謝を申し上げます。ありがとうございます</span>🙏🙏🙏<span><br><br>Misskeyを気に入っていただけたらぜひ</span><a href=\"https://misskey-hub.net/ja/docs/donate/\">支援</a>をお願いします！(Misskeyカードもあるよ)</p>",
+    "_misskey_content": "Misskey v2024.7.0 is out now!!\n[リリースノート](https://misskey-hub.net/ja/docs/releases/)\n\n開発に貢献してくださった方々、ベータ版をテストしてくださった方々、いつも支援してくださっている方々に感謝を申し上げます。ありがとうございます🙏🙏🙏\n\nMisskeyを気に入っていただけたらぜひ[支援](https://misskey-hub.net/ja/docs/donate/)をお願いします！(Misskeyカードもあるよ)",
+    "source": {
+        "content": "Misskey v2024.7.0 is out now!!\n[リリースノート](https://misskey-hub.net/ja/docs/releases/)\n\n開発に貢献してくださった方々、ベータ版をテストしてくださった方々、いつも支援してくださっている方々に感謝を申し上げます。ありがとうございます🙏🙏🙏\n\nMisskeyを気に入っていただけたらぜひ[支援](https://misskey-hub.net/ja/docs/donate/)をお願いします！(Misskeyカードもあるよ)",
+        "mediaType": "text/x.misskeymarkdown"
+    },
+    "published": "2024-07-31T11:38:15.549Z",
+    "to": [
+        "https://www.w3.org/ns/activitystreams#Public"
+    ],
+    "cc": [
+        "https://misskey.io/users/7rkrarq81i/followers"
+    ],
+    "inReplyTo": null,
+    "attachment": [
+        {
+            "type": "Document",
+            "mediaType": "image/webp",
+            "url": "https://media.misskeyusercontent.com/io/64830759-dd74-47ed-ac69-e03ba2917691.webp",
+            "name": null,
+            "sensitive": false
+        }
+    ],
+    "sensitive": false,
+    "tag": []
+}

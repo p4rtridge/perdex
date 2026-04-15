@@ -1,0 +1,118 @@
+{
+    "@context": [
+        "https://www.w3.org/ns/activitystreams",
+        {
+            "ostatus": "http://ostatus.org#",
+            "atomUri": "ostatus:atomUri",
+            "inReplyToAtomUri": "ostatus:inReplyToAtomUri",
+            "conversation": "ostatus:conversation",
+            "sensitive": "as:sensitive",
+            "toot": "http://joinmastodon.org/ns#",
+            "votersCount": "toot:votersCount",
+            "quote": {
+                "@id": "https://w3id.org/fep/044f#quote",
+                "@type": "@id"
+            },
+            "quoteUri": "http://fedibird.com/ns#quoteUri",
+            "_misskey_quote": "https://misskey-hub.net/ns#_misskey_quote",
+            "quoteAuthorization": {
+                "@id": "https://w3id.org/fep/044f#quoteAuthorization",
+                "@type": "@id"
+            },
+            "gts": "https://gotosocial.org/ns#",
+            "interactionPolicy": {
+                "@id": "gts:interactionPolicy",
+                "@type": "@id"
+            },
+            "canQuote": {
+                "@id": "gts:canQuote",
+                "@type": "@id"
+            },
+            "automaticApproval": {
+                "@id": "gts:automaticApproval",
+                "@type": "@id"
+            },
+            "manualApproval": {
+                "@id": "gts:manualApproval",
+                "@type": "@id"
+            },
+            "blurhash": "toot:blurhash",
+            "focalPoint": {
+                "@container": "@list",
+                "@id": "toot:focalPoint"
+            },
+            "Hashtag": "as:Hashtag"
+        }
+    ],
+    "id": "https://mastodon.social/users/a2_4am/statuses/116410563154525427",
+    "type": "Note",
+    "summary": null,
+    "inReplyTo": null,
+    "published": "2026-04-15T20:17:07Z",
+    "url": "https://mastodon.social/@a2_4am/116410563154525427",
+    "attributedTo": "https://mastodon.social/users/a2_4am",
+    "to": [
+        "https://www.w3.org/ns/activitystreams#Public"
+    ],
+    "cc": [
+        "https://mastodon.social/users/a2_4am/followers"
+    ],
+    "sensitive": false,
+    "atomUri": "https://mastodon.social/users/a2_4am/statuses/116410563154525427",
+    "inReplyToAtomUri": null,
+    "conversation": "https://mastodon.social/contexts/108472103943588335-116410563154525427",
+    "context": "https://mastodon.social/contexts/108472103943588335-116410563154525427",
+    "content": "<p class=\"quote-inline\">RE: <a href=\"https://mastodon.social/@a2_4am/116394543502882937\" target=\"_blank\" rel=\"nofollow noopener\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"ellipsis\">mastodon.social/@a2_4am/116394</span><span class=\"invisible\">543502882937</span></a></p><p>Update: he ate the replacement cone of shame </p><p><a href=\"https://mastodon.social/tags/DogsOfMastodon\" class=\"mention hashtag\" rel=\"tag\">#<span>DogsOfMastodon</span></a></p>",
+    "contentMap": {
+        "en": "<p class=\"quote-inline\">RE: <a href=\"https://mastodon.social/@a2_4am/116394543502882937\" target=\"_blank\" rel=\"nofollow noopener\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"ellipsis\">mastodon.social/@a2_4am/116394</span><span class=\"invisible\">543502882937</span></a></p><p>Update: he ate the replacement cone of shame </p><p><a href=\"https://mastodon.social/tags/DogsOfMastodon\" class=\"mention hashtag\" rel=\"tag\">#<span>DogsOfMastodon</span></a></p>"
+    },
+    "quote": "https://mastodon.social/users/a2_4am/statuses/116394543502882937",
+    "_misskey_quote": "https://mastodon.social/users/a2_4am/statuses/116394543502882937",
+    "quoteUri": "https://mastodon.social/users/a2_4am/statuses/116394543502882937",
+    "quoteAuthorization": "https://mastodon.social/users/a2_4am/quote_authorizations/116410563154507130",
+    "interactionPolicy": {
+        "canQuote": {
+            "automaticApproval": [
+                "https://www.w3.org/ns/activitystreams#Public"
+            ]
+        }
+    },
+    "attachment": [
+        {
+            "type": "Document",
+            "mediaType": "image/jpeg",
+            "url": "https://files.mastodon.social/media_attachments/files/116/410/562/962/947/681/original/f0bb77b200b20834.jpg",
+            "name": "Photo of beagle sitting next to a plastic cone, which has been ripped in half and chewed with deliberate malice",
+            "blurhash": "UWDc?$%hxuozQkn#ofayRPoJRPWBkXxut8WB",
+            "width": 2499,
+            "height": 3319
+        }
+    ],
+    "tag": [
+        {
+            "type": "Hashtag",
+            "href": "https://mastodon.social/tags/dogsofmastodon",
+            "name": "#dogsofmastodon"
+        }
+    ],
+    "replies": {
+        "id": "https://mastodon.social/users/a2_4am/statuses/116410563154525427/replies",
+        "type": "Collection",
+        "first": {
+            "type": "CollectionPage",
+            "next": "https://mastodon.social/users/a2_4am/statuses/116410563154525427/replies?only_other_accounts=true&page=true",
+            "partOf": "https://mastodon.social/users/a2_4am/statuses/116410563154525427/replies",
+            "items": []
+        }
+    },
+    "likes": {
+        "id": "https://mastodon.social/users/a2_4am/statuses/116410563154525427/likes",
+        "type": "Collection",
+        "totalItems": 157
+    },
+    "shares": {
+        "id": "https://mastodon.social/users/a2_4am/statuses/116410563154525427/shares",
+        "type": "Collection",
+        "totalItems": 64
+    }
+}

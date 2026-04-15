@@ -11,12 +11,14 @@ install-tools:
     sudo apt install valgrind & \
     sudo apt install gnuplot & \
     sudo apt install massif-visualizer & \
-    cargo install --locked cargo-tarpaulin
+    cargo install just & \
+    cargo install --locked cargo-llvm-cov & \
+    cargo install --locked cargo-nextest
 
 # Test with coverage
 test package="" *args:
     @if [ -z "{{package}}" ]; then \
-        cargo tarpaulin --workspace {{args}}; \
+        cargo llvm-cov nextest --workspace {{args}}; \
     else \
-        cargo tarpaulin -p {{package}} {{args}}; \
+        cargo llvm-cov nextest -p {{package}} {{args}}; \
     fi

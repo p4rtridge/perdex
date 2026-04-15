@@ -6,6 +6,8 @@ use serde::{
 };
 use serde_with::{DeserializeAs, SerializeAs, de::DeserializeAsWrap, ser::SerializeAsWrap};
 
+use crate::jsonld::serde::EXPECTING_SET;
+
 macro_rules! forward_to_into_deserializer {
     (
         @some $name:ident($ty:ty);
@@ -41,6 +43,10 @@ macro_rules! forward_to_into_deserializer {
 pub struct SkipNone;
 pub struct KeepNone;
 
+/// Deserialize a single value or a set to a [`Vec`].
+///
+/// It tries to deserilize @id attribute if the value is a object
+/// according to the JSON-LD data model
 pub struct Set<U = serde_with::Same, F = KeepNone>(PhantomData<U>, PhantomData<F>);
 
 impl<T, U> SerializeAs<Vec<T>> for Set<U>
@@ -112,7 +118,27 @@ where
     type Value = Vec<T>;
 
     fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(super::EXPECTING_SET)
+        f.write_str(EXPECTING_SET)
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: de::SeqAccess<'de>,
+    {
+        let mut values = Vec::with_capacity(seq.size_hint().unwrap_or(0));
+        while let Some(value) = seq.next_element::<DeserializeAsWrap<T, U>>()? {
+            values.push(value.into_inner());
+        }
+        Ok(values)
+    }
+
+    fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+    where
+        A: de::MapAccess<'de>,
+    {
+        let deserializer = serde::de::value::MapAccessDeserializer::new(map);
+        let value = U::deserialize_as(deserializer)?;
+        Ok(vec![value])
     }
 
     fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
@@ -163,26 +189,6 @@ where
         Ok(vec![value])
     }
 
-    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-    where
-        A: de::SeqAccess<'de>,
-    {
-        let mut values = Vec::with_capacity(seq.size_hint().unwrap_or(0));
-        while let Some(value) = seq.next_element::<DeserializeAsWrap<T, U>>()? {
-            values.push(value.into_inner());
-        }
-        Ok(values)
-    }
-
-    fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
-    where
-        A: de::MapAccess<'de>,
-    {
-        let deserializer = serde::de::value::MapAccessDeserializer::new(map);
-        let value = U::deserialize_as(deserializer)?;
-        Ok(vec![value])
-    }
-
     fn visit_enum<A>(self, data: A) -> Result<Self::Value, A::Error>
     where
         A: de::EnumAccess<'de>,
@@ -224,7 +230,7 @@ where
     type Value = Vec<Option<T>>;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(super::EXPECTING_SET)
+        formatter.write_str(EXPECTING_SET)
     }
 
     fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>

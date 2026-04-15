@@ -1,4 +1,4 @@
-//! Integration tests for `pd_jsonld::serde::Set`.
+//! Integration tests for `pd_activitypub::serde::Set`.
 //!
 //! `Set<U>` is a JSON-LD "set" adapter: when *deserializing* it accepts
 //! either a bare scalar/map/enum (wraps it in a single-element `Vec`) or a
@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_test::{Token, assert_de_tokens, assert_ser_tokens, assert_tokens};
 use serde_with::serde_as;
 
-use pd_jsonld::serde::{Set, SkipNone};
+use pd_activitypub::jsonld::serde::{Set, SkipNone};
 
 #[serde_as]
 #[derive(Debug, Deserialize, Serialize, PartialEq)]

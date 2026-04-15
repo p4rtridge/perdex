@@ -1,0 +1,107 @@
+{
+    "@context": [
+        "https://www.w3.org/ns/activitystreams",
+        "https://w3id.org/security/v1",
+        "https://purl.archive.org/socialweb/webfinger",
+        {
+            "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
+            "toot": "http://joinmastodon.org/ns#",
+            "featured": {
+                "@id": "toot:featured",
+                "@type": "@id"
+            },
+            "featuredTags": {
+                "@id": "toot:featuredTags",
+                "@type": "@id"
+            },
+            "alsoKnownAs": {
+                "@id": "as:alsoKnownAs",
+                "@type": "@id"
+            },
+            "movedTo": {
+                "@id": "as:movedTo",
+                "@type": "@id"
+            },
+            "schema": "http://schema.org#",
+            "PropertyValue": "schema:PropertyValue",
+            "value": "schema:value",
+            "discoverable": "toot:discoverable",
+            "suspended": "toot:suspended",
+            "memorial": "toot:memorial",
+            "indexable": "toot:indexable",
+            "attributionDomains": {
+                "@id": "toot:attributionDomains",
+                "@type": "@id"
+            },
+            "showFeatured": "toot:showFeatured",
+            "showMedia": "toot:showMedia",
+            "showRepliesInMedia": "toot:showRepliesInMedia",
+            "focalPoint": {
+                "@container": "@list",
+                "@id": "toot:focalPoint"
+            }
+        }
+    ],
+    "id": "https://mastodon.social/users/dangillmor",
+    "webfinger": "dangillmor@mastodon.social",
+    "type": "Person",
+    "following": "https://mastodon.social/users/dangillmor/following",
+    "followers": "https://mastodon.social/users/dangillmor/followers",
+    "inbox": "https://mastodon.social/users/dangillmor/inbox",
+    "outbox": "https://mastodon.social/users/dangillmor/outbox",
+    "featured": "https://mastodon.social/users/dangillmor/collections/featured",
+    "featuredTags": "https://mastodon.social/users/dangillmor/collections/tags",
+    "preferredUsername": "dangillmor",
+    "name": "Dan Gillmor",
+    "summary": "<p>Bio and disclosures: dangillmor.com/about/ Boosts mean I think you should see this -- usually but not always an endorsement.</p><p>Bay Area, Nara  ·  dangillmor.com</p>",
+    "url": "https://mastodon.social/@dangillmor",
+    "manuallyApprovesFollowers": false,
+    "discoverable": true,
+    "indexable": true,
+    "published": "2022-10-21T00:00:00Z",
+    "memorial": false,
+    "showFeatured": true,
+    "showMedia": true,
+    "showRepliesInMedia": true,
+    "publicKey": {
+        "id": "https://mastodon.social/users/dangillmor#main-key",
+        "owner": "https://mastodon.social/users/dangillmor",
+        "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuGCbQpxCkeUYOVUkhSLv\noB97vnaEwuKZS0xMmdyhzLGPc4L3XhRMVgs+RPzKRSyRGkrDkypQmSvCgDw4jYkb\nc2D9a2zRB/NaKdpPVvo9N+NBOoPxHuf8PuBofq3CsFXlzFfjCkZR2pJa7ZZFjOwE\nbhhZXMTOYwur1+7vDwu820o6Gh/+wn6O/Zj1//cqHepaVhzy8zPIE2Gv03pnkVNO\nJwakcvPcH/xW9Lm7yQCezGi3kAdpRpVfeGBhR+jsxeHTDj1L6f4AIHYCfHq5TYo3\n++IN4unpTkLXrEUEzwbfOCIwdnNxp0PEICBvNNVsgK6gLv8CsfO92aVm3xHQqUfQ\ndwIDAQAB\n-----END PUBLIC KEY-----\n"
+    },
+    "tag": [],
+    "attachment": [
+        {
+            "type": "PropertyValue",
+            "name": "Personal site",
+            "value": "<a href=\"https://dangillmor.com\" target=\"_blank\" rel=\"nofollow noopener me\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"\">dangillmor.com</span><span class=\"invisible\"></span></a>"
+        },
+        {
+            "type": "PropertyValue",
+            "name": "My Pixelfed photos",
+            "value": "<a href=\"https://pixelfed.social/dangillmor\" target=\"_blank\" rel=\"nofollow noopener me\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"\">pixelfed.social/dangillmor</span><span class=\"invisible\"></span></a>"
+        },
+        {
+            "type": "PropertyValue",
+            "name": "\"Cornerstone of Democracy\" Newsletter",
+            "value": "<a href=\"https://cornerstone.dangillmor.com\" target=\"_blank\" rel=\"nofollow noopener me\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"\">cornerstone.dangillmor.com</span><span class=\"invisible\"></span></a>"
+        },
+        {
+            "type": "PropertyValue",
+            "name": "Contact me",
+            "value": "<a href=\"https://dangillmor.com/contact\" target=\"_blank\" rel=\"nofollow noopener me\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"\">dangillmor.com/contact</span><span class=\"invisible\"></span></a>"
+        }
+    ],
+    "endpoints": {
+        "sharedInbox": "https://mastodon.social/inbox"
+    },
+    "icon": {
+        "type": "Image",
+        "mediaType": "image/png",
+        "url": "https://files.mastodon.social/accounts/avatars/109/208/442/152/198/181/original/a98930cc33876975.png"
+    },
+    "image": {
+        "type": "Image",
+        "mediaType": "image/jpeg",
+        "url": "https://files.mastodon.social/accounts/headers/109/208/442/152/198/181/original/d2e119d96c59317e.jpg"
+    }
+}
