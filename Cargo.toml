@@ -1,29 +1,58 @@
+
+[workspace]
+resolver = "3"
+members = [
+    "app",
+    "crates/pd-activitypub",
+    "crates/pd-http",
+    "crates/pd-telemetry",
+]
+
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
 
-[workspace]
-resolver = "3"
-members = ["app", "crates/pd-telemetry", "crates/pd-activitypub"]
-
 [workspace.dependencies]
 # Local dependencies
 pd-telemetry = { path = "crates/pd-telemetry" }
 
-tokio = { version = "1", features = ["full"] }
+async-stream = { version = "0.3" }
 axum = { version = "0.8.9" }
+bytes = { version = "1.11", features = ["serde"] }
 eyre = { version = "0.6" }
+futures-util = { version = "0.3", default-features = false, features = [
+    "async-await",
+    "std",
+] }
+hickory-resolver = { version = "0.26", default-features = false, features = [
+    "tokio",
+    "tls-ring",
+    "rustls-platform-verifier",
+] }
+http = { version = "1.4" }
+reqwest = { version = "0.13", features = [
+    "stream",
+    "gzip",
+    "brotli",
+    "zstd",
+    "deflate",
+] }
 serde = { version = "1.0", features = ["derive"] }
 serde_with = { version = "3" }
+simdutf8 = { version = "0.1" }
 sonic-rs = { version = "0.5" }
+time = { version = "0.3", features = ["serde-human-readable"] }
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.5", default-features = false, features = ["util"] }
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-bytes = { version = "1.11", features = ["serde"] }
-time = { version = "0.3", features = ["serde-human-readable"] }
+typed-builder = { version = "0.23" }
 
 # Dev dependencies
+flate2 = { version = "1.1" }
 serde_test = { version = "1.0" }
+wiremock = { version = "0.6" }
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }

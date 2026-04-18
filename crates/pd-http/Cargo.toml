@@ -1,0 +1,26 @@
+[package]
+name = "pd-http"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+async-stream = { workspace = true }
+bytes = { workspace = true }
+eyre = { workspace = true }
+futures-util = { workspace = true }
+hickory-resolver = { workspace = true }
+http = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+simdutf8 = { workspace = true }
+sonic-rs = { workspace = true }
+tower = { workspace = true }
+
+[dev-dependencies]
+flate2 = { workspace = true }
+tokio = { workspace = true }
+wiremock = { workspace = true }
+
+[lints]
+workspace = true

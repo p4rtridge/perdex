@@ -5,11 +5,11 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-tokio = { workspace = true }
 axum = { workspace = true }
 eyre = { workspace = true }
-tracing = { workspace = true }
 pd-telemetry = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
 
 [lints]
 workspace = true
