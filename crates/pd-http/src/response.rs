@@ -1,6 +1,6 @@
 use async_stream::try_stream;
 use bytes::{Bytes, BytesMut};
-use futures_util::{Stream, StreamExt};
+use futures_util::{StreamExt, stream::BoxStream};
 use http::{HeaderMap, StatusCode, Version};
 use serde::de::DeserializeOwned;
 
@@ -74,7 +74,7 @@ impl Response {
     }
 
     /// Stream a chunk of the response body.
-    pub async fn stream(self) -> impl Stream<Item = Result<Bytes>> {
+    pub async fn stream(self) -> BoxStream<'static, Result<Bytes>> {
         let inner = self.inner;
         let limit = self.body_limit;
 
@@ -88,6 +88,7 @@ impl Response {
                 yield chunk;
             }
         }
+        .boxed()
     }
 
     /// Read the body and attempt to interpret it as a UTF-8 encoded string
