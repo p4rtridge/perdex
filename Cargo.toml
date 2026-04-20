@@ -4,6 +4,7 @@ resolver = "3"
 members = [
     "app",
     "crates/pd-activitypub",
+    "crates/pd-core",
     "crates/pd-http",
     "crates/pd-telemetry",
 ]
@@ -15,7 +16,9 @@ license = "MIT"
 
 [workspace.dependencies]
 # Local dependencies
+pd-http = { path = "crates/pd-http" }
 pd-telemetry = { path = "crates/pd-telemetry" }
+pd-core = { path = "crates/pd-core" }
 
 async-stream = { version = "0.3" }
 axum = { version = "0.8.9" }
@@ -48,6 +51,9 @@ tower = { version = "0.5", default-features = false, features = ["util"] }
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 typed-builder = { version = "0.23" }
+urlencoding = { version = "2.1" }
+thiserror = { version = "2.0" }
+error-stack = { version = "0.7" }
 
 # Dev dependencies
 flate2 = { version = "1.1" }

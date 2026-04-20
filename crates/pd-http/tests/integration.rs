@@ -2,8 +2,9 @@ use std::io::Write;
 
 use flate2::{Compression, write::GzEncoder};
 use futures_util::StreamExt;
-use http::{Method, header::CONTENT_ENCODING};
-use pd_http::{HttpClient, Request};
+use http::{Method, Request, header::CONTENT_ENCODING};
+use pd_http::Client;
+use reqwest::Body;
 use wiremock::{Mock, MockServer};
 
 #[tokio::test]
@@ -18,8 +19,12 @@ async fn get_bytes() {
         .await;
 
     let url = format!("{}/bytes", &mock_server.uri());
-    let client = HttpClient::builder().build().unwrap();
-    let request = Request::new(Method::GET, url.parse().unwrap());
+    let client = Client::builder().build().unwrap();
+    let request = Request::builder()
+        .method(Method::GET)
+        .uri(url)
+        .body(Body::default())
+        .unwrap();
     let response = client.execute(request).await.unwrap();
 
     assert!(response.status().is_success());
@@ -40,8 +45,12 @@ async fn get_stream() {
         .await;
 
     let url = format!("{}/stream", &mock_server.uri());
-    let client = HttpClient::builder().build().unwrap();
-    let request = Request::new(Method::GET, url.parse().unwrap());
+    let client = Client::builder().build().unwrap();
+    let request = Request::builder()
+        .method(Method::GET)
+        .uri(url)
+        .body(Body::default())
+        .unwrap();
     let mut stream = client.execute(request).await.unwrap().stream().await;
 
     let mut downloaded = Vec::new();
@@ -71,8 +80,12 @@ async fn get_json() {
         .await;
 
     let url = format!("{}/json", &mock_server.uri());
-    let client = HttpClient::builder().build().unwrap();
-    let request = Request::new(Method::GET, url.parse().unwrap());
+    let client = Client::builder().build().unwrap();
+    let request = Request::builder()
+        .method(Method::GET)
+        .uri(url)
+        .body(Body::default())
+        .unwrap();
     let response = client.execute(request).await.unwrap();
 
     assert!(response.status().is_success());
@@ -92,13 +105,20 @@ async fn fail_on_content_length_exceeded() {
         .await;
 
     let url = format!("{}/bytes", &mock_server.uri());
-    let client = HttpClient::builder().body_limit(Some(512)).build().unwrap();
-    let request = Request::new(Method::GET, url.parse().unwrap());
+    let client = Client::builder().body_limit(Some(512)).build().unwrap();
+    let request = Request::builder()
+        .method(Method::GET)
+        .uri(url)
+        .body(Body::default())
+        .unwrap();
     let response = client.execute(request).await.unwrap().bytes().await;
 
     assert!(response.is_err());
     let error = response.err().unwrap();
-    assert_eq!(error.to_string(), "Content length exceeds body limit");
+    assert_eq!(
+        error.current_context().to_string(),
+        "Response body exceeds the configured limit of 512 bytes"
+    );
 }
 
 #[tokio::test]
@@ -120,11 +140,12 @@ async fn fail_on_body_limit_exceeded() {
         .await;
 
     let url = format!("{}/bytes", &mock_server.uri());
-    let client = HttpClient::builder()
-        .body_limit(Some(1024))
-        .build()
+    let client = Client::builder().body_limit(Some(1024)).build().unwrap();
+    let request = Request::builder()
+        .method(Method::GET)
+        .uri(url)
+        .body(Body::default())
         .unwrap();
-    let request = Request::new(Method::GET, url.parse().unwrap());
     let response = client.execute(request).await.unwrap();
 
     assert_eq!(response.content_length(), None);
@@ -132,5 +153,8 @@ async fn fail_on_body_limit_exceeded() {
     let response = response.bytes().await;
     assert!(response.is_err());
     let error = response.err().unwrap();
-    assert_eq!(error.to_string(), "Response body exceeds body limit");
+    assert_eq!(
+        error.current_context().to_string(),
+        "Response body exceeds the configured limit of 1024 bytes"
+    );
 }

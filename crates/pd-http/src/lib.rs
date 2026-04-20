@@ -1,14 +1,13 @@
 use std::time::Duration;
 
-use http::{HeaderMap, HeaderName, HeaderValue, header::USER_AGENT};
-use reqwest::Client;
-use tower::BoxError;
+use error_stack::{Report, ResultExt};
+use reqwest::Request;
 
-pub use reqwest::Request;
+pub use http;
+pub use reqwest::Body;
 
-use crate::{error::Error, resolver::Resolver, response::Response};
+use crate::{resolver::Resolver, response::Response};
 
-pub mod error;
 pub mod resolver;
 pub mod response;
 
@@ -16,43 +15,75 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 const DEFAULT_BODY_LIMIT: usize = 1024 * 1024; // 1 MiB
 const DEFAULT_USER_AGENT: &str = "pd-http/0.1.0"; // TODO: Use actual version
 
-pub(crate) type Result<T, E = error::Error> = std::result::Result<T, E>;
+pub(crate) type Result<T> = std::result::Result<T, Report<Error>>;
 
-/// A wrapper around `reqwest::Client` that provides additional features like body size limits and custom DNS resolvers.
-pub struct HttpClient {
-    client: Client,
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("Failed to build HTTP client")]
+    RequestBuildError,
+
+    #[error("Failed to execute HTTP request")]
+    RequestExecutionError,
+
+    #[error("Failed to read HTTP response")]
+    ResponseReadError,
+
+    #[error("Failed to convert header: {0}")]
+    HeaderConversionError(String),
+
+    #[error("Response body exceeds the configured limit of {0} bytes")]
+    BodyLimitExceeded(usize),
+}
+
+/// A wrapper around `reqwest::Client`
+///
+/// This is thread-safe and can be cloned because `reqwest::Client` is designed to be shared across threads.
+#[derive(Clone)]
+pub struct Client {
+    client: reqwest::Client,
     body_limit: Option<usize>,
 }
 
-impl HttpClient {
+impl Client {
     /// Creates a new `HttpClientBuilder`
-    pub fn builder() -> HttpClientBuilder {
-        HttpClientBuilder::default()
+    pub fn builder() -> ClientBuilder {
+        ClientBuilder::default()
             .user_agent(DEFAULT_USER_AGENT)
-            .expect("Failed to build HTTP client builder")
+            .expect("Failed to init HTTP client builder")
     }
 
     /// Executes the given HTTP request and returns a `Response``
-    #[inline]
-    pub async fn execute(&self, request: Request) -> Result<Response> {
-        let response = self.client.execute(request).await?;
+    pub async fn execute(&self, request: http::Request<Body>) -> Result<Response> {
+        let request = Request::try_from(request).change_context(Error::RequestExecutionError)?;
+        let response = self
+            .client
+            .execute(request)
+            .await
+            .change_context(Error::RequestExecutionError)?;
         Ok(Response::new(response, self.body_limit))
+    }
+
+    pub async fn get(&self, url: &str) -> Result<Response> {
+        let request = http::Request::get(url)
+            .body(Body::default())
+            .expect("Failed to build GET request");
+        self.execute(request).await
     }
 }
 
 /// A builder for `HttpClient`
 #[derive(Debug)]
-pub struct HttpClientBuilder {
+pub struct ClientBuilder {
     dns_resolver: Option<Resolver>,
     body_limit: Option<usize>,
-    default_headers: HeaderMap,
+    default_headers: http::HeaderMap,
     timeout: Option<Duration>,
 }
 
-impl HttpClientBuilder {
+impl ClientBuilder {
     /// Builds the `HttpClient`
-    pub fn build(self) -> Result<HttpClient> {
-        let mut client_builder = Client::builder().default_headers(self.default_headers);
+    pub fn build(self) -> Result<Client> {
+        let mut client_builder = reqwest::Client::builder().default_headers(self.default_headers);
 
         if let Some(timeout) = self.timeout {
             client_builder = client_builder.timeout(timeout);
@@ -63,8 +94,10 @@ impl HttpClientBuilder {
             .unwrap_or_else(|| Resolver::builder().build());
         client_builder = client_builder.dns_resolver(resolver);
 
-        let client = client_builder.build().map_err(Error::from)?;
-        Ok(HttpClient {
+        let client = client_builder
+            .build()
+            .change_context(Error::RequestBuildError)?;
+        Ok(Client {
             client,
             body_limit: self.body_limit,
         })
@@ -89,14 +122,18 @@ impl HttpClientBuilder {
     /// Adds a default header to be included in all requests made by the client.
     pub fn default_header<K, V>(mut self, name: K, value: V) -> Result<Self>
     where
-        K: TryInto<HeaderName>,
-        K::Error: Into<BoxError>,
-        V: TryInto<HeaderValue>,
-        V::Error: Into<BoxError>,
+        K: TryInto<http::header::HeaderName>,
+        K::Error: std::error::Error + Send + Sync + 'static,
+        V: TryInto<http::header::HeaderValue>,
+        V::Error: std::error::Error + Send + Sync + 'static,
     {
         self.default_headers.insert(
-            name.try_into().map_err(Error::from)?,
-            value.try_into().map_err(Error::from)?,
+            name.try_into().change_context_lazy(|| {
+                Error::HeaderConversionError("Failed to convert header name".into())
+            })?,
+            value.try_into().change_context_lazy(|| {
+                Error::HeaderConversionError("Failed to convert header value".into())
+            })?,
         );
         Ok(self)
     }
@@ -104,10 +141,10 @@ impl HttpClientBuilder {
     /// Sets the `User-Agent` header for all requests made by the client.
     pub fn user_agent<V>(self, value: V) -> Result<Self>
     where
-        V: TryInto<HeaderValue>,
-        V::Error: Into<BoxError>,
+        V: TryInto<http::header::HeaderValue>,
+        V::Error: std::error::Error + Send + Sync + 'static,
     {
-        self.default_header(USER_AGENT, value)
+        self.default_header(http::header::USER_AGENT, value)
     }
 
     /// Sets a timeout for all requests made by the client
@@ -118,12 +155,12 @@ impl HttpClientBuilder {
     }
 }
 
-impl Default for HttpClientBuilder {
+impl Default for ClientBuilder {
     fn default() -> Self {
         Self {
             dns_resolver: None,
             body_limit: Some(DEFAULT_BODY_LIMIT),
-            default_headers: HeaderMap::new(),
+            default_headers: http::HeaderMap::new(),
             timeout: Some(DEFAULT_TIMEOUT),
         }
     }

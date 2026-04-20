@@ -1,0 +1,23 @@
+{
+    "subject": "acct:partridge@mastodon.com",
+    "aliases": [
+        "https://mastodon.com/@partridge",
+        "https://mastodon.com/users/partridge"
+    ],
+    "links": [
+        {
+            "rel": "http://webfinger.net/rel/profile-page",
+            "type": "text/html",
+            "href": "https://mastodon.com/@partridge"
+        },
+        {
+            "rel": "self",
+            "type": "application/activity+json",
+            "href": "https://mastodon.com/users/partridge"
+        },
+        {
+            "rel": "http://ostatus.org/schema/1.0/subscribe",
+            "template": "https://mastodon.com/authorize_interaction?uri={uri}"
+        }
+    ]
+}

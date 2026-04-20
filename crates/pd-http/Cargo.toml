@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+error-stack = { workspace = true }
+thiserror = { workspace = true }
 async-stream = { workspace = true }
 bytes = { workspace = true }
 futures-util = { workspace = true }

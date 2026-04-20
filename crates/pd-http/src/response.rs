@@ -1,10 +1,11 @@
 use async_stream::try_stream;
 use bytes::{Bytes, BytesMut};
+use error_stack::{ResultExt, bail};
 use futures_util::{StreamExt, stream::BoxStream};
 use http::{HeaderMap, StatusCode, Version};
 use serde::de::DeserializeOwned;
 
-use crate::{Result, error::Error};
+use crate::{Error, Result};
 
 const INITIAL_BUFFER_SIZE: usize = 8 * 1024; // 8 KiB
 
@@ -66,7 +67,12 @@ impl Response {
         let mut validator = BodyLimit::new(self.content_length(), self.body_limit)?;
 
         let mut bytes = BytesMut::with_capacity(INITIAL_BUFFER_SIZE);
-        while let Some(chunk) = self.inner.chunk().await? {
+        while let Some(chunk) = self
+            .inner
+            .chunk()
+            .await
+            .change_context(Error::ResponseReadError)?
+        {
             validator.validate(chunk.len())?;
             bytes.extend_from_slice(&chunk);
         }
@@ -83,7 +89,7 @@ impl Response {
             let mut stream = inner.bytes_stream();
 
             while let Some(chunk) = stream.next().await {
-                let chunk = chunk?;
+                let chunk = chunk.change_context(Error::ResponseReadError)?;
                 validator.validate(chunk.len())?;
                 yield chunk;
             }
@@ -95,7 +101,7 @@ impl Response {
     pub async fn text(self) -> Result<String> {
         let bytes = self.bytes().await?;
         let text = simdutf8::basic::from_utf8(&bytes)
-            .map_err(|_| Error::from("Response body is not valid UTF-8"))?
+            .change_context(Error::ResponseReadError)?
             .to_string();
         Ok(text)
     }
@@ -106,7 +112,7 @@ impl Response {
         T: DeserializeOwned,
     {
         let bytes = self.bytes().await?;
-        sonic_rs::from_slice(&bytes).map_err(Error::from)
+        sonic_rs::from_slice(&bytes).change_context(Error::ResponseReadError)
     }
 }
 
@@ -123,7 +129,7 @@ impl BodyLimit {
             && let Some(content_length) = content_length
             && content_length > limit as u64
         {
-            return Err(Error::from("Content length exceeds body limit"));
+            bail!(Error::BodyLimitExceeded(limit));
         }
 
         Ok(Self {
@@ -136,7 +142,7 @@ impl BodyLimit {
         if let Some(limit) = self.limit {
             self.bytes_read += chunk_size;
             if self.bytes_read > limit {
-                return Err(Error::from("Response body exceeds body limit"));
+                bail!(Error::BodyLimitExceeded(limit));
             }
         }
         Ok(())
