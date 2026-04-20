@@ -1,5 +1,5 @@
 [package]
-name = "pd-activitypub"
+name = "pd-federation"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -12,19 +12,17 @@ error-stack = { workspace = true }
 serde = { workspace = true }
 serde_with = { workspace = true }
 sonic-rs = { workspace = true }
-thiserror = { workspace = true }
 time = { workspace = true }
-tracing = { workspace = true }
 typed-builder = { workspace = true }
 urlencoding = { workspace = true }
 
 [dev-dependencies]
+axum = { workspace = true }
+axum-server = { workspace = true }
 bytes = { workspace = true }
+rustls = { workspace = true }
 serde_test = { workspace = true }
 tokio = { workspace = true }
-axum-server = { workspace = true }
-axum = { workspace = true }
-rustls = { workspace = true }
 
 [lints]
 workspace = true

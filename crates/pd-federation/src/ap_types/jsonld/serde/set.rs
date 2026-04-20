@@ -6,7 +6,7 @@ use serde::{
 };
 use serde_with::{DeserializeAs, SerializeAs, de::DeserializeAsWrap, ser::SerializeAsWrap};
 
-use crate::jsonld::serde::EXPECTING_SET;
+use crate::ap_types::jsonld::serde::EXPECTING_SET;
 
 macro_rules! forward_to_into_deserializer {
     (
@@ -66,22 +66,6 @@ where
     }
 }
 
-impl<T, U> SerializeAs<Vec<Option<T>>> for Set<U, SkipNone>
-where
-    U: SerializeAs<T>,
-{
-    fn serialize_as<S>(source: &Vec<Option<T>>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let iter = source
-            .iter()
-            .flatten()
-            .map(|item| SerializeAsWrap::<T, U>::new(item));
-        serializer.collect_seq(iter)
-    }
-}
-
 impl<'de, T, U> DeserializeAs<'de, Vec<T>> for Set<U>
 where
     T: Deserialize<'de>,
@@ -92,19 +76,6 @@ where
         D: serde::Deserializer<'de>,
     {
         deserializer.deserialize_any(Visitor(PhantomData::<T>, PhantomData::<U>))
-    }
-}
-
-impl<'de, T, U> DeserializeAs<'de, Vec<Option<T>>> for Set<U, SkipNone>
-where
-    T: Deserialize<'de>,
-    U: DeserializeAs<'de, T>,
-{
-    fn deserialize_as<D>(deserializer: D) -> Result<Vec<Option<T>>, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_any(SkipNoneVisitor(PhantomData::<T>, PhantomData::<U>))
     }
 }
 
@@ -217,6 +188,39 @@ where
         visit_string(String);
         visit_bytes(&[u8]);
         visit_byte_buf(Vec<u8>);
+    }
+}
+
+impl<T, U> SerializeAs<Vec<Option<T>>> for Set<U, SkipNone>
+where
+    U: SerializeAs<T>,
+{
+    fn serialize_as<S>(source: &Vec<Option<T>>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        if source.is_empty() {
+            serializer.serialize_none()
+        } else {
+            let iter = source
+                .iter()
+                .flatten()
+                .map(|item| SerializeAsWrap::<T, U>::new(item));
+            serializer.collect_seq(iter)
+        }
+    }
+}
+
+impl<'de, T, U> DeserializeAs<'de, Vec<Option<T>>> for Set<U, SkipNone>
+where
+    T: Deserialize<'de>,
+    U: DeserializeAs<'de, T>,
+{
+    fn deserialize_as<D>(deserializer: D) -> Result<Vec<Option<T>>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_any(SkipNoneVisitor(PhantomData::<T>, PhantomData::<U>))
     }
 }
 

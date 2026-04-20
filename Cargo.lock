@@ -67,7 +67,6 @@ dependencies = [
  "axum",
  "error-stack",
  "pd-telemetry",
- "thiserror 2.0.18",
  "tokio",
  "tracing",
 ]
@@ -1530,7 +1529,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "pd-activitypub"
+name = "pd-core"
+version = "0.1.0"
+dependencies = [
+ "error-stack",
+ "serde",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "pd-federation"
 version = "0.1.0"
 dependencies = [
  "axum",
@@ -1544,21 +1552,10 @@ dependencies = [
  "serde_test",
  "serde_with",
  "sonic-rs",
- "thiserror 2.0.18",
  "time",
  "tokio",
- "tracing",
  "typed-builder",
  "urlencoding",
-]
-
-[[package]]
-name = "pd-core"
-version = "0.1.0"
-dependencies = [
- "error-stack",
- "serde",
- "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -1586,7 +1583,6 @@ name = "pd-telemetry"
 version = "0.1.0"
 dependencies = [
  "error-stack",
- "thiserror 2.0.18",
  "tracing",
  "tracing-subscriber",
 ]

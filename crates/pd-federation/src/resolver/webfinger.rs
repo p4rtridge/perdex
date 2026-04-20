@@ -8,9 +8,9 @@ use pd_http::{
 };
 use typed_builder::TypedBuilder;
 
-use crate::ap::webfinger::Resource;
+use crate::ap_types::webfinger::Resource;
 
-const ACCEPT_VALUE: HeaderValue = HeaderValue::from_static("application/jrd+json");
+const ACCEPT_JRD_VALUE: HeaderValue = HeaderValue::from_static("application/jrd+json");
 const MAX_REDIRECTS: usize = 3;
 
 #[derive(Clone, TypedBuilder)]
@@ -37,7 +37,7 @@ impl AccountResolver for Webfinger {
 
             let request = Request::builder()
                 .method(Method::GET)
-                .header(ACCEPT, ACCEPT_VALUE)
+                .header(ACCEPT, ACCEPT_JRD_VALUE)
                 .uri(webfinger_uri)
                 .body(Body::default())
                 .expect("Failed to build WebFinger request");

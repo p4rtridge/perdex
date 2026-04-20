@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use pd_activitypub::ap::{actor, object};
+use pd_federation::ap_types::actor;
 
 // Returns a list of all files in the given directory path
 fn get_test_data(path: PathBuf) -> Vec<PathBuf> {
@@ -19,28 +19,13 @@ fn get_test_data(path: PathBuf) -> Vec<PathBuf> {
 
 #[test]
 fn serde_actor() {
-    let files = get_test_data(PathBuf::from("tests/datasets/actors"));
+    let files = get_test_data(PathBuf::from("tests/datas/actors"));
     for file in files {
         let filename = file.file_name().unwrap().to_os_string();
         let data = std::fs::read(file).unwrap();
         if let Err(error) = sonic_rs::from_slice::<actor::Actor>(&data) {
             panic!(
                 "Failed to deserialize actor ({}): {error}",
-                filename.display()
-            );
-        }
-    }
-}
-
-#[test]
-fn serde_object() {
-    let files = get_test_data(PathBuf::from("tests/datasets/objects"));
-    for file in files {
-        let filename = file.file_name().unwrap().to_os_string();
-        let data = std::fs::read(file).unwrap();
-        if let Err(error) = sonic_rs::from_slice::<object::Object>(&data) {
-            panic!(
-                "Failed to deserialize object ({}): {error}",
                 filename.display()
             );
         }

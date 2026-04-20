@@ -3,7 +3,7 @@ use serde_with::{serde_as, skip_serializing_none};
 use sonic_rs::Value;
 use time::OffsetDateTime;
 
-use crate::{ap::object::Object, jsonld};
+use crate::ap_types::{jsonld, object::Object};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub enum ActivityType {

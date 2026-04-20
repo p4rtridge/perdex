@@ -6,7 +6,7 @@ use serde::{
 };
 use serde_with::{DeserializeAs, SerializeAs, de::DeserializeAsWrap};
 
-use crate::jsonld::serde::EXPECTING_NODE;
+use crate::ap_types::jsonld::serde::EXPECTING_NODE;
 
 /// Deserialize a single node identifier string or a set of node identifier strings.
 pub struct Id;

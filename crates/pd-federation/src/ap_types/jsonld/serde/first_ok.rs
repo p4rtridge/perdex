@@ -6,7 +6,7 @@ use serde::{
 };
 use serde_with::{DeserializeAs, SerializeAs, de::DeserializeAsWrap};
 
-use crate::jsonld::serde::EXPECTING_NODE;
+use crate::ap_types::jsonld::serde::EXPECTING_NODE;
 
 macro_rules! forward_to_into_deserializer {
     ($($name:ident($T:ty);)*) => {$(
