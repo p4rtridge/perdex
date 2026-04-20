@@ -58,6 +58,8 @@ urlencoding = { version = "2.1" }
 flate2 = { version = "1.1" }
 serde_test = { version = "1.0" }
 wiremock = { version = "0.6" }
+axum-server = { version = "0.8", features = ["tls-rustls"] }
+rustls = { version = "0.23", features = ["ring"] }
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }

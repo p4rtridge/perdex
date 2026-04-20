@@ -22,7 +22,9 @@ urlencoding = { workspace = true }
 bytes = { workspace = true }
 serde_test = { workspace = true }
 tokio = { workspace = true }
-wiremock = { workspace = true }
+axum-server = { workspace = true }
+axum = { workspace = true }
+rustls = { workspace = true }
 
 [lints]
 workspace = true

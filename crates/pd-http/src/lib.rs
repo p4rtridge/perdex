@@ -56,12 +56,17 @@ pub struct ClientBuilder {
     body_limit: Option<usize>,
     default_headers: http::HeaderMap,
     timeout: Option<Duration>,
+
+    /// This opt should only be used for testing purposes
+    accept_invalid_certs: bool,
 }
 
 impl ClientBuilder {
     /// Builds the `HttpClient`
     pub fn build(self) -> Result<Client> {
-        let mut client_builder = reqwest::Client::builder().default_headers(self.default_headers);
+        let mut client_builder = reqwest::Client::builder()
+            .tls_danger_accept_invalid_certs(self.accept_invalid_certs)
+            .default_headers(self.default_headers);
 
         if let Some(timeout) = self.timeout {
             client_builder = client_builder.timeout(timeout);
@@ -128,11 +133,19 @@ impl ClientBuilder {
         self.timeout = Some(timeout);
         self
     }
+
+    /// Configures the client to accept invalid TLS certificates. This should only be used for testing purposes.
+    #[must_use]
+    pub fn accept_invalid_certs(mut self, accept: bool) -> Self {
+        self.accept_invalid_certs = accept;
+        self
+    }
 }
 
 impl Default for ClientBuilder {
     fn default() -> Self {
         Self {
+            accept_invalid_certs: false,
             dns_resolver: None,
             body_limit: Some(DEFAULT_BODY_LIMIT),
             default_headers: http::HeaderMap::new(),
