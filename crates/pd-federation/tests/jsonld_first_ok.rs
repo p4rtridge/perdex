@@ -22,7 +22,6 @@ fn single_valid_value() {
 
 #[test]
 fn fallback_sequence() {
-    // Tries elements one by one; fails on complex object, succeeds on string
     let de_json = r#"{"value":[{"nested":"fail"},"expected_value"]}"#;
     let de: FirstOkStruct<String> = sonic_rs::from_str(de_json).unwrap();
     assert_eq!(de.value, "expected_value");
@@ -31,3 +30,29 @@ fn fallback_sequence() {
     let ser = sonic_rs::to_string(&de).unwrap();
     assert_eq!(ser, ser_json);
 }
+
+macro_rules! test_primitive {
+    ($name:ident, $type:ty, $json:expr, $expected:expr) => {
+        #[test]
+        fn $name() {
+            let json = format!(r#"{{"value":{}}}"#, $json);
+            let de: FirstOkStruct<$type> = sonic_rs::from_str(&json).unwrap();
+            assert_eq!(de.value, $expected);
+            let ser = sonic_rs::to_string(&de).unwrap();
+            assert_eq!(ser, json);
+        }
+    };
+}
+
+test_primitive!(test_bool, bool, "true", true);
+test_primitive!(test_i8, i8, "-42", -42i8);
+test_primitive!(test_i16, i16, "-42", -42i16);
+test_primitive!(test_i32, i32, "-42", -42i32);
+test_primitive!(test_i64, i64, "-42", -42i64);
+test_primitive!(test_u8, u8, "42", 42u8);
+test_primitive!(test_u16, u16, "42", 42u16);
+test_primitive!(test_u32, u32, "42", 42u32);
+test_primitive!(test_u64, u64, "42", 42u64);
+test_primitive!(test_f32, f32, "42.5", 42.5f32);
+test_primitive!(test_f64, f64, "42.5", 42.5f64);
+test_primitive!(test_json_char, char, "\"x\"", 'x');

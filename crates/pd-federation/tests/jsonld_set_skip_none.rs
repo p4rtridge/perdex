@@ -22,7 +22,6 @@ fn empty_sequence() {
 
 #[test]
 fn skips_null_elements() {
-    // Deserialization maps null to None, which the test checks
     let de_json = r#"{"values":[null,"val1",null,"val2"]}"#;
     let de: SetSkipNoneStruct<String> = sonic_rs::from_str(de_json).unwrap();
     assert_eq!(
@@ -30,10 +29,36 @@ fn skips_null_elements() {
         vec![Some("val1".to_string()), Some("val2".to_string())]
     );
 
-    // Serialization filters out Nones but emits an array
     let ser_data = SetSkipNoneStruct::<String> {
         values: vec![None, Some("val1".to_string()), None],
     };
     let ser = sonic_rs::to_string(&ser_data).unwrap();
     assert_eq!(ser, r#"{"values":["val1"]}"#);
 }
+
+macro_rules! test_primitive {
+    ($name:ident, $type:ty, $json:expr, $expected:expr) => {
+        #[test]
+        fn $name() {
+            let json = format!(r#"{{"values":[null, {}]}}"#, $json);
+            let de: SetSkipNoneStruct<$type> = sonic_rs::from_str(&json).unwrap();
+            assert_eq!(de.values, vec![Some($expected)]);
+            let ser_json = format!(r#"{{"values":[{}]}}"#, $json);
+            let ser = sonic_rs::to_string(&de).unwrap();
+            assert_eq!(ser, ser_json);
+        }
+    };
+}
+
+test_primitive!(test_bool, bool, "true", true);
+test_primitive!(test_i8, i8, "-42", -42i8);
+test_primitive!(test_i16, i16, "-42", -42i16);
+test_primitive!(test_i32, i32, "-42", -42i32);
+test_primitive!(test_i64, i64, "-42", -42i64);
+test_primitive!(test_u8, u8, "42", 42u8);
+test_primitive!(test_u16, u16, "42", 42u16);
+test_primitive!(test_u32, u32, "42", 42u32);
+test_primitive!(test_u64, u64, "42", 42u64);
+test_primitive!(test_f32, f32, "42.5", 42.5f32);
+test_primitive!(test_f64, f64, "42.5", 42.5f64);
+test_primitive!(test_json_char, char, "\"x\"", 'x');

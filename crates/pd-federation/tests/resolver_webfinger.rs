@@ -1,6 +1,6 @@
 use std::{collections::HashMap, net::SocketAddr};
 
-use axum::{Json, Router, extract::Query, routing};
+use axum::{Json, Router, extract::Query, http::StatusCode, response::IntoResponse, routing};
 use axum_server::tls_rustls::RustlsConfig;
 use pd_core::federation::domain::account::AccountResolver;
 use pd_federation::{ap_types::webfinger::Resource, resolver::webfinger::Webfinger};
@@ -20,7 +20,32 @@ async fn prepare_mock_server() -> u16 {
         "/.well-known/webfinger",
         routing::get(|Query(params): Query<HashMap<String, String>>| async move {
             let resource = params.get("resource").cloned().unwrap_or_default();
+
+            if resource.starts_with("acct:not_found@") {
+                return (StatusCode::NOT_FOUND, "Not Found").into_response();
+            }
+
+            if resource.starts_with("acct:bad_json@") {
+                return (StatusCode::OK, "{ bad json }").into_response();
+            }
+
             let base = include_bytes!("datas/webfinger/partridge_jrd.json");
+
+            if resource.starts_with("acct:invalid_syntax@") {
+                // Return subject that does not have acct: or @ domain format
+                let body = sonic_rs::json!(&Resource {
+                    subject: "invalid_syntax".to_string(),
+                    ..sonic_rs::from_slice(base).unwrap()
+                });
+                return Json(body).into_response();
+            }
+
+            if resource.starts_with("acct:no_self_link@") {
+                let mut res: Resource = sonic_rs::from_slice(base).unwrap();
+                res.subject = resource;
+                res.links.clear(); // Removing all links, so no rel="self"
+                return Json(res).into_response();
+            }
 
             let resource_buf = resource.strip_prefix("acct:partridge_");
 
@@ -40,7 +65,7 @@ async fn prepare_mock_server() -> u16 {
                     ..sonic_rs::from_slice(base).unwrap()
                 });
             }
-            Json(body)
+            Json(body).into_response()
         }),
     );
 
@@ -71,23 +96,24 @@ async fn prepare_mock_server() -> u16 {
     bounded_port
 }
 
-#[tokio::test]
-async fn basic() {
-    let mock_port = prepare_mock_server().await;
-
+fn create_client() -> Webfinger {
     let client = Client::builder()
         .accept_invalid_certs(true)
         .build()
         .unwrap();
-    let webfinger = Webfinger::builder().http_client(client).build();
+    Webfinger::builder().http_client(client).build()
+}
 
+#[tokio::test]
+async fn basic() {
+    let mock_port = prepare_mock_server().await;
+    let webfinger = create_client();
     let domain = format!("127.0.0.1:{}", mock_port);
     let resource = webfinger
         .resolve_account("partridge", &domain)
         .await
-        .expect("Failed to resolve account")
+        .unwrap()
         .unwrap();
-
     assert_eq!(resource.username, "partridge");
     assert_eq!(resource.domain, domain);
 }
@@ -95,22 +121,62 @@ async fn basic() {
 #[tokio::test]
 async fn redirect_unbounded() {
     let mock_port = prepare_mock_server().await;
-
-    let client = Client::builder()
-        .accept_invalid_certs(true)
-        .build()
-        .unwrap();
-    let webfinger = Webfinger::builder().http_client(client).build();
-
+    let webfinger = create_client();
     let domain = format!("127.0.0.1:{}", mock_port);
     let resource = webfinger
         .resolve_account("partridge_0", &domain)
         .await
-        .expect("Failed to resolve account");
+        .unwrap();
+    assert!(resource.is_none());
+}
 
-    assert!(
-        resource.is_none(),
-        "Expected no subject for unbounded redirect, but got {:?}",
-        resource
-    );
+#[tokio::test]
+async fn not_found_returns_none() {
+    let mock_port = prepare_mock_server().await;
+    let webfinger = create_client();
+    let resource = webfinger
+        .resolve_account("not_found", &format!("127.0.0.1:{}", mock_port))
+        .await
+        .unwrap();
+    assert!(resource.is_none());
+}
+
+#[tokio::test]
+async fn bad_json_returns_error() {
+    let mock_port = prepare_mock_server().await;
+    let webfinger = create_client();
+    let resource = webfinger
+        .resolve_account("bad_json", &format!("127.0.0.1:{}", mock_port))
+        .await;
+    assert!(resource.is_err());
+}
+
+#[tokio::test]
+async fn invalid_acct_returns_none() {
+    let mock_port = prepare_mock_server().await;
+    let webfinger = create_client();
+    let resource = webfinger
+        .resolve_account("invalid_syntax", &format!("127.0.0.1:{}", mock_port))
+        .await
+        .unwrap();
+    assert!(resource.is_none());
+}
+
+#[tokio::test]
+async fn no_self_link_returns_none() {
+    let mock_port = prepare_mock_server().await;
+    let webfinger = create_client();
+    let resource = webfinger
+        .resolve_account("no_self_link", &format!("127.0.0.1:{}", mock_port))
+        .await
+        .unwrap();
+    assert!(resource.is_none());
+}
+
+#[tokio::test]
+async fn network_error_returns_error() {
+    let webfinger = create_client();
+    // To trigger a fast network error, we use a closed local port or an invalid scheme.
+    let resource = webfinger.resolve_account("partridge", "127.0.0.1:0").await;
+    assert!(resource.is_err());
 }
