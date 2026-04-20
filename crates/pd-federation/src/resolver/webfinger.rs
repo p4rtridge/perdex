@@ -29,11 +29,9 @@ impl AccountResolver for Webfinger {
 
         let mut acct_buf: String;
         let mut acct = original_acct.as_str();
-        let mut username = username;
-        let mut domain = domain;
 
         let mut remaining_redirects = MAX_REDIRECTS;
-        let links = loop {
+        let (subject, links) = loop {
             let webfinger_uri = format!("https://{domain}/.well-known/webfinger?resource={acct}");
 
             let request = Request::builder()
@@ -42,26 +40,18 @@ impl AccountResolver for Webfinger {
                 .uri(webfinger_uri)
                 .body(Body::default())
                 .expect("Failed to build WebFinger request");
-            let response = self
-                .http_client
-                .execute(request)
-                .await
-                .change_context_lazy(|| {
-                    AccountResolutionError::ResolutionError(
-                        "Failed to execute WebFinger request".to_string(),
-                    )
-                })?;
+            let response = self.http_client.execute(request).await.change_context(
+                AccountResolutionError::ResolutionError("Failed to execute WebFinger request"),
+            )?;
             if matches!(response.status(), StatusCode::NOT_FOUND | StatusCode::GONE) {
                 return Ok(None);
             }
 
-            let resource = response.json::<Resource>().await.change_context_lazy(|| {
-                AccountResolutionError::ResolutionError(
-                    "Failed to parse WebFinger response".to_string(),
-                )
-            })?;
+            let resource = response.json::<Resource>().await.change_context(
+                AccountResolutionError::ResolutionError("Failed to parse WebFinger response"),
+            )?;
             if resource.subject == acct {
-                break resource.links;
+                break (resource.subject, resource.links);
             }
 
             if remaining_redirects == 0 {
@@ -71,17 +61,15 @@ impl AccountResolver for Webfinger {
             acct_buf = resource.subject;
             acct = acct_buf.as_str();
 
-            let Some(username_domain) = acct
-                .strip_prefix("acct:")
-                .and_then(|acct| acct.split_once('@'))
-            else {
-                return Ok(None);
-            };
-            (username, domain) = username_domain;
-
             remaining_redirects -= 1;
         };
 
+        let Some((username, domain)) = subject
+            .strip_prefix("acct:")
+            .and_then(|acct| acct.split_once('@'))
+        else {
+            return Ok(None);
+        };
         let Some(uri) = links
             .into_iter()
             .find_map(|link| (link.rel == "self").then_some(link.href?))

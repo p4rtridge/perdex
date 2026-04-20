@@ -20,5 +20,5 @@ pub enum AccountResolutionError {
 
     /// An error occurred during resolution
     #[error("Failed to resolve account: {0}")]
-    ResolutionError(String),
+    ResolutionError(&'static str),
 }
