@@ -1,6 +1,7 @@
 use error_stack::{Report, ResultExt};
-use pd_core::federation::domain::account::{
-    AccountResolutionError, AccountResolver, AccountResource,
+use pd_core::account::{
+    model::{AccountResolutionError, AccountResource},
+    traits::AccountResolver,
 };
 use pd_http::{
     Body, Client,
@@ -8,7 +9,7 @@ use pd_http::{
 };
 use typed_builder::TypedBuilder;
 
-use crate::ap_types::webfinger::Resource;
+use crate::ap_type::webfinger::Resource;
 
 const ACCEPT_JRD_VALUE: HeaderValue = HeaderValue::from_static("application/jrd+json");
 const MAX_REDIRECTS: usize = 3;

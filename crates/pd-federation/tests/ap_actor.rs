@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use pd_federation::ap_types::actor;
+use pd_federation::ap_type::actor;
 
 // Returns a list of all files in the given directory path
 fn get_test_data(path: PathBuf) -> Vec<PathBuf> {

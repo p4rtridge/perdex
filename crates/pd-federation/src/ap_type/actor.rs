@@ -3,7 +3,7 @@ use serde_with::{serde_as, skip_serializing_none};
 use sonic_rs::Value;
 use time::OffsetDateTime;
 
-use crate::ap_types::jsonld;
+use super::jsonld;
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub enum ActorType {

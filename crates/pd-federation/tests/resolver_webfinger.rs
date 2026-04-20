@@ -2,8 +2,8 @@ use std::{collections::HashMap, net::SocketAddr};
 
 use axum::{Json, Router, extract::Query, http::StatusCode, response::IntoResponse, routing};
 use axum_server::tls_rustls::RustlsConfig;
-use pd_core::federation::domain::account::AccountResolver;
-use pd_federation::{ap_types::webfinger::Resource, resolver::webfinger::Webfinger};
+use pd_core::account::traits::AccountResolver;
+use pd_federation::{ap_type::webfinger::Resource, resolver::webfinger::Webfinger};
 use pd_http::Client;
 
 async fn load_tls_config() -> RustlsConfig {

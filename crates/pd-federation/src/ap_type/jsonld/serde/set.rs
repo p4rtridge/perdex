@@ -6,7 +6,7 @@ use serde::{
 };
 use serde_with::{DeserializeAs, SerializeAs, de::DeserializeAsWrap, ser::SerializeAsWrap};
 
-use crate::ap_types::jsonld::serde::EXPECTING_SET;
+use super::EXPECTING_SET;
 
 macro_rules! forward_to_into_deserializer {
     (

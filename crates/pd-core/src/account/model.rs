@@ -1,4 +1,3 @@
-use error_stack::Report;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -22,12 +21,4 @@ pub enum AccountResolutionError {
     /// An error occurred during resolution
     #[error("Failed to resolve account: {0}")]
     ResolutionError(String),
-}
-
-pub trait AccountResolver {
-    fn resolve_account(
-        &self,
-        username: &str,
-        domain: &str,
-    ) -> impl Future<Output = Result<Option<AccountResource>, Report<AccountResolutionError>>>;
 }
