@@ -65,8 +65,9 @@ name = "app"
 version = "0.1.0"
 dependencies = [
  "axum",
- "eyre",
+ "error-stack",
  "pd-telemetry",
+ "thiserror 2.0.18",
  "tokio",
  "tracing",
 ]
@@ -555,6 +556,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99a1a66f27cc1b82d6b8c2d24b3b1e90e6e67004a448081bbe58bd537f72a7c8"
 dependencies = [
  "anyhow",
+ "eyre",
  "rustc_version",
 ]
 
@@ -1492,7 +1494,6 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "error-stack",
- "eyre",
  "pd-core",
  "pd-http",
  "serde",
@@ -1534,7 +1535,6 @@ dependencies = [
  "sonic-rs",
  "thiserror 2.0.18",
  "tokio",
- "tower",
  "wiremock",
 ]
 
@@ -1542,7 +1542,8 @@ dependencies = [
 name = "pd-telemetry"
 version = "0.1.0"
 dependencies = [
- "eyre",
+ "error-stack",
+ "thiserror 2.0.18",
  "tracing",
  "tracing-subscriber",
 ]

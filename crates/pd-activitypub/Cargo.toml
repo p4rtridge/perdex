@@ -5,19 +5,18 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-pd-http = { workspace = true }
 pd-core = { workspace = true }
+pd-http = { workspace = true }
 
-thiserror = { workspace = true }
 error-stack = { workspace = true }
-eyre = { workspace = true }
 serde = { workspace = true }
 serde_with = { workspace = true }
 sonic-rs = { workspace = true }
+thiserror = { workspace = true }
 time = { workspace = true }
+tracing = { workspace = true }
 typed-builder = { workspace = true }
 urlencoding = { workspace = true }
-tracing = { workspace = true }
 
 [dev-dependencies]
 bytes = { workspace = true }

@@ -5,10 +5,9 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-error-stack = { workspace = true }
-thiserror = { workspace = true }
 async-stream = { workspace = true }
 bytes = { workspace = true }
+error-stack = { workspace = true }
 futures-util = { workspace = true }
 hickory-resolver = { workspace = true }
 http = { workspace = true }
@@ -16,7 +15,7 @@ reqwest = { workspace = true }
 serde = { workspace = true }
 simdutf8 = { workspace = true }
 sonic-rs = { workspace = true }
-tower = { workspace = true }
+thiserror = { workspace = true }
 
 [dev-dependencies]
 flate2 = { workspace = true }

@@ -1,39 +1,24 @@
 use std::time::Duration;
 
-use error_stack::{Report, ResultExt};
+use error_stack::ResultExt;
 use reqwest::Request;
 
 pub use http;
 pub use reqwest::Body;
 
-use crate::{resolver::Resolver, response::Response};
+use crate::{
+    error::{Error, Result},
+    resolver::Resolver,
+    response::Response,
+};
 
+mod error;
 pub mod resolver;
 pub mod response;
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 const DEFAULT_BODY_LIMIT: usize = 1024 * 1024; // 1 MiB
 const DEFAULT_USER_AGENT: &str = "pd-http/0.1.0"; // TODO: Use actual version
-
-pub(crate) type Result<T> = std::result::Result<T, Report<Error>>;
-
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("Failed to build HTTP client")]
-    RequestBuildError,
-
-    #[error("Failed to execute HTTP request")]
-    RequestExecutionError,
-
-    #[error("Failed to read HTTP response")]
-    ResponseReadError,
-
-    #[error("Failed to convert header: {0}")]
-    HeaderConversionError(String),
-
-    #[error("Response body exceeds the configured limit of {0} bytes")]
-    BodyLimitExceeded(usize),
-}
 
 /// A wrapper around `reqwest::Client`
 ///
@@ -54,20 +39,13 @@ impl Client {
 
     /// Executes the given HTTP request and returns a `Response``
     pub async fn execute(&self, request: http::Request<Body>) -> Result<Response> {
-        let request = Request::try_from(request).change_context(Error::RequestExecutionError)?;
+        let request = Request::try_from(request).change_context(Error::RequestExecution)?;
         let response = self
             .client
             .execute(request)
             .await
-            .change_context(Error::RequestExecutionError)?;
+            .change_context(Error::RequestExecution)?;
         Ok(Response::new(response, self.body_limit))
-    }
-
-    pub async fn get(&self, url: &str) -> Result<Response> {
-        let request = http::Request::get(url)
-            .body(Body::default())
-            .expect("Failed to build GET request");
-        self.execute(request).await
     }
 }
 
@@ -94,9 +72,7 @@ impl ClientBuilder {
             .unwrap_or_else(|| Resolver::builder().build());
         client_builder = client_builder.dns_resolver(resolver);
 
-        let client = client_builder
-            .build()
-            .change_context(Error::RequestBuildError)?;
+        let client = client_builder.build().change_context(Error::RequestBuild)?;
         Ok(Client {
             client,
             body_limit: self.body_limit,
@@ -128,12 +104,11 @@ impl ClientBuilder {
         V::Error: std::error::Error + Send + Sync + 'static,
     {
         self.default_headers.insert(
-            name.try_into().change_context_lazy(|| {
-                Error::HeaderConversionError("Failed to convert header name".into())
-            })?,
-            value.try_into().change_context_lazy(|| {
-                Error::HeaderConversionError("Failed to convert header value".into())
-            })?,
+            name.try_into()
+                .change_context_lazy(|| Error::Other("Failed to convert header name".into()))?,
+            value
+                .try_into()
+                .change_context_lazy(|| Error::Other("Failed to convert header value".into()))?,
         );
         Ok(self)
     }
