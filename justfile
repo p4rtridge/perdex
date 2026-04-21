@@ -26,7 +26,6 @@ install-tools:
     sudo apt install valgrind & \
     sudo apt install gnuplot & \
     sudo apt install massif-visualizer & \
-    cargo install just & \
     cargo install --locked cargo-llvm-cov & \
     cargo install --locked cargo-nextest & \
     cargo install cargo-sort & \

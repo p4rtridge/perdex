@@ -6,6 +6,7 @@ members = [
     "crates/pd-core",
     "crates/pd-federation",
     "crates/pd-http",
+    "crates/pd-signature",
     "crates/pd-telemetry",
 ]
 
@@ -22,6 +23,7 @@ pd-telemetry = { path = "crates/pd-telemetry" }
 
 async-stream = { version = "0.3" }
 axum = { version = "0.8.9" }
+base64-simd = { version = "0.8" }
 bytes = { version = "1.11", features = ["serde"] }
 error-stack = { version = "0.7", features = ["eyre"] }
 futures-util = { version = "0.3", default-features = false, features = [
@@ -34,6 +36,8 @@ hickory-resolver = { version = "0.26", default-features = false, features = [
     "rustls-platform-verifier",
 ] }
 http = { version = "1.4" }
+logos = { version = "0.16" }
+miette = { version = "7.6" }
 reqwest = { version = "0.13", features = [
     "stream",
     "gzip",
@@ -41,6 +45,7 @@ reqwest = { version = "0.13", features = [
     "zstd",
     "deflate",
 ] }
+ring = { version = "0.17", features = ["std"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_with = { version = "3" }
 simdutf8 = { version = "0.1" }
