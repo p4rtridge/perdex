@@ -4,40 +4,6 @@ use miette::{Diagnostic, SourceSpan};
 
 use crate::cavage::SignatureHeader;
 
-/// Parse a `Signature` HTTP header value into a [`SignatureHeader`] struct
-pub fn parse(
-    input: &str,
-) -> Result<SignatureHeader<'_, impl Iterator<Item = &'_ str>>, Report<ParseError>> {
-    let mut tokenizer = Tokenizer {
-        inner: Token::parse(input),
-        input,
-        is_broken: false,
-    };
-
-    let mut builder = SignatureHeader::builder();
-    while let Some((key, value)) = tokenizer.next().transpose()? {
-        match key {
-            "keyId" => builder.key_id(value),
-            "signature" => builder.signature(value),
-            "headers" => builder.headers(value.split_whitespace()),
-            "created" => builder.created(
-                value
-                    .parse::<u64>()
-                    .change_context(ParseError::Radix10Parse)?,
-            ),
-            "expires" => builder.expires(
-                value
-                    .parse::<u64>()
-                    .change_context(ParseError::Radix10Parse)?,
-            ),
-            // Ignore unknown keys as per the spec
-            _ => {}
-        }
-    }
-
-    builder.build().change_context(ParseError::MissingField)
-}
-
 /// Signature header parse error
 #[derive(Debug, Diagnostic, thiserror::Error)]
 pub enum ParseError {
@@ -66,6 +32,40 @@ pub enum ParseError {
     /// Missing field in the header
     #[error("Missing required field")]
     MissingField,
+}
+
+/// Parse a `Signature` HTTP header value into a [`SignatureHeader`] struct
+pub fn parse(
+    input: &str,
+) -> Result<SignatureHeader<'_, impl Iterator<Item = &'_ str> + Clone>, Report<ParseError>> {
+    let mut tokenizer = Tokenizer {
+        inner: Token::parse(input),
+        input,
+        is_broken: false,
+    };
+
+    let mut builder = SignatureHeader::builder();
+    while let Some((key, value)) = tokenizer.next().transpose()? {
+        match key {
+            "keyId" => builder.key_id(value),
+            "signature" => builder.signature(value),
+            "headers" => builder.headers(value.split_whitespace()),
+            "created" => builder.created(
+                value
+                    .parse::<u64>()
+                    .change_context(ParseError::Radix10Parse)?,
+            ),
+            "expires" => builder.expires(
+                value
+                    .parse::<u64>()
+                    .change_context(ParseError::Radix10Parse)?,
+            ),
+            // Ignore unknown keys as per the spec
+            _ => {}
+        }
+    }
+
+    builder.build().change_context(ParseError::MissingField)
 }
 
 struct Tokenizer<'a, I> {

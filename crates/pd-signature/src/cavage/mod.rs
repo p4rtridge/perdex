@@ -1,6 +1,8 @@
 use error_stack::Report;
 
-pub mod parser;
+pub mod parse;
+mod serialize;
+pub mod sig;
 
 /// Struct representation of the `Signature` HTTP header
 #[derive(Debug)]
