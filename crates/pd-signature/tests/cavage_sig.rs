@@ -50,7 +50,7 @@ fn get_ed25519_pkcs8_private_key() -> Vec<u8> {
 }
 
 #[must_use]
-pub fn get_request() -> Request<()> {
+fn get_request() -> Request<()> {
     Request::builder()
         .method(Method::POST)
         .uri(Uri::from_static("/foo?param=value&pet=dog"))
@@ -98,4 +98,27 @@ async fn with_ed25519() {
     })
     .await
     .unwrap();
+}
+
+#[cfg(feature = "mock-time-test")]
+#[tokio::test]
+async fn with_rsa_expire() {
+    use std::time::{Duration, SystemTime};
+
+    let req = get_request();
+
+    let signed_req = cavage::sig::sign(req, "Test", &get_rsa_pkcs8_private_key())
+        .await
+        .unwrap();
+
+    cavage::sig::MOCK_TIME.with(|t: &std::cell::RefCell<Option<SystemTime>>| {
+        *t.borrow_mut() = Some(SystemTime::now() + Duration::from_mins(30))
+    });
+
+    let _ = cavage::sig::verify(&signed_req, |_key_id| {
+        #[allow(unreachable_code)]
+        future::ready(unreachable!() as Result<_, BoxError>)
+    })
+    .await
+    .unwrap_err();
 }

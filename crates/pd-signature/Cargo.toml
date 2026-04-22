@@ -21,5 +21,8 @@ thiserror = { workspace = true }
 [dev-dependencies]
 tokio = { workspace = true }
 
+[features]
+mock-time-test = []
+
 [lints]
 workspace = true

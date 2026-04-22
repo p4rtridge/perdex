@@ -17,8 +17,8 @@ edition = "2024"
 license = "MIT"
 
 [workspace.dependencies]
-pd-blocking = { path = "crates/pd-blocking" }
 # Local dependencies
+pd-blocking = { path = "crates/pd-blocking" }
 pd-core = { path = "crates/pd-core" }
 pd-http = { path = "crates/pd-http" }
 pd-telemetry = { path = "crates/pd-telemetry" }
@@ -30,7 +30,7 @@ bytes = { version = "1.11", features = ["serde"] }
 const-oid = { version = "0.9.6", features = [
     "db",
 ] } # PKCS8 0.10 depends on const-oid 0.9.6
-error-stack = { version = "0.7", features = ["eyre"] }
+error-stack = { version = "0.7" }
 futures-util = { version = "0.3", default-features = false, features = [
     "async-await",
     "std",

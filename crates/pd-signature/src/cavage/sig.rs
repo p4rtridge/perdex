@@ -30,6 +30,9 @@ pub enum SigError {
     #[error("Failed to build signature string")]
     BuildSigString,
 
+    #[error("Clock skewed")]
+    ClockSkewed,
+
     #[error("Missing signature header")]
     MissingSignatureHeader,
 
@@ -47,6 +50,9 @@ pub enum SigError {
 
     #[error("Signature expired")]
     SignatureExpired,
+
+    #[error("Signature too old")]
+    SignatureTooOld,
 
     #[error("Unsupported HTTP method")]
     UnsupportedHttpMethod,
@@ -70,9 +76,9 @@ pub async fn sign<B>(
     key: &[u8],
 ) -> Result<Request<B>, Report<SigError>> {
     // Overwrite the date header with the current time
-    let date_header_value = HeaderValue::from_str(&httpdate::fmt_http_date(SystemTime::now()))
+    let date_header = HeaderValue::from_str(&httpdate::fmt_http_date(SystemTime::now()))
         .expect("Failed to format date header value");
-    req.headers_mut().insert(DATE, date_header_value);
+    req.headers_mut().insert(DATE, date_header);
 
     let headers = match *req.method() {
         Method::GET => GET_HEADERS.iter().copied(),
@@ -125,22 +131,21 @@ where
     Fut: Future<Output = Result<Vec<u8>, E>>,
     E: Into<BoxError>,
 {
-    let Some(sig_header_value) = req.headers().get(SIGNATURE_HEADER) else {
+    let Some(sig_header) = req.headers().get(SIGNATURE_HEADER) else {
         return Err(Report::new(SigError::MissingSignatureHeader));
     };
 
     let signature_header = header::parse(
-        sig_header_value
+        sig_header
             .to_str()
             .change_context(SigError::InvalidSignatureHeader)?,
     )
     .change_context(SigError::InvalidSignatureHeader)?;
-
-    let encoded_signature = signature_header.signature.to_string();
-    is_safe(req, &signature_header)?;
+    is_signature_header_safe(req, &signature_header)?;
 
     let signature_string =
         build_signature_string(req, &signature_header).change_context(SigError::BuildSigString)?;
+    let encoded_signature = signature_header.signature.to_string();
 
     let pem_key = get_key(signature_header.key_id)
         .await
@@ -225,7 +230,7 @@ where
 }
 
 /// Perform a basic safety check on the signature header and the request
-fn is_safe<'a, B, H>(
+fn is_signature_header_safe<'a, B, H>(
     req: &Request<B>,
     signature_header: &SignatureHeader<'_, H>,
 ) -> Result<(), SigError>
@@ -247,30 +252,33 @@ where
         return Err(SigError::MissingRequiredHeaders);
     }
 
-    // Move the current time forward a bit to allow for some clock skew between the signer and verifier
-    let now = SystemTime::now();
-    let signature_valid_duration = if let Some(expires) = signature_header.expires {
-        let expiration_timestamp =
-            SystemTime::UNIX_EPOCH + Duration::from_secs(expires) + CLOCK_SKEW_ADJUSTMENT;
+    // Add a small adjustment to the current time to account for clock skew between the signer and the verifier
+    let now = get_current_time();
 
-        std::cmp::min(
-            expiration_timestamp
-                .duration_since(now)
-                .map_err(|_| SigError::SignatureExpired)?,
-            MAX_ACCEPTED_SIGNATURE_AGE,
-        )
-    } else {
-        MAX_ACCEPTED_SIGNATURE_AGE
-    };
+    if let Some(expires) = signature_header.expires {
+        let expiration_time = SystemTime::UNIX_EPOCH
+            .checked_add(Duration::from_secs(expires))
+            .and_then(|exp| exp.checked_add(CLOCK_SKEW_ADJUSTMENT))
+            .ok_or(SigError::InvalidSignatureHeader)?;
+
+        let time_until_expiration = expiration_time
+            .duration_since(now)
+            .map_err(|_| SigError::SignatureExpired)?;
+        if time_until_expiration > MAX_ACCEPTED_SIGNATURE_AGE {
+            return Err(SigError::SignatureExpired);
+        }
+    }
 
     if let Some(created) = signature_header.created {
-        let created_time = SystemTime::UNIX_EPOCH + Duration::from_secs(created);
-        if now
-            .duration_since(created_time)
-            .unwrap_or_else(|_| Duration::from_secs(0))
-            > signature_valid_duration
-        {
-            return Err(SigError::SignatureExpired);
+        let created_time = SystemTime::UNIX_EPOCH
+            .checked_add(Duration::from_secs(created))
+            .ok_or(SigError::InvalidSignatureHeader)?;
+
+        if created_time > now + CLOCK_SKEW_ADJUSTMENT {
+            return Err(SigError::ClockSkewed);
+        }
+        if now.duration_since(created_time).unwrap_or_default() > MAX_ACCEPTED_SIGNATURE_AGE {
+            return Err(SigError::SignatureTooOld);
         }
     }
 
@@ -281,12 +289,12 @@ where
                 .map_err(|_| SigError::InvalidSignatureHeader)?,
         )
         .map_err(|_| SigError::InvalidSignatureHeader)?;
-        if now
-            .duration_since(date_header_time)
-            .unwrap_or_else(|_| Duration::from_secs(0))
-            > signature_valid_duration
-        {
-            return Err(SigError::SignatureExpired);
+
+        if date_header_time > now + CLOCK_SKEW_ADJUSTMENT {
+            return Err(SigError::ClockSkewed);
+        }
+        if now.duration_since(date_header_time).unwrap_or_default() > MAX_ACCEPTED_SIGNATURE_AGE {
+            return Err(SigError::SignatureTooOld);
         }
     }
 
@@ -303,4 +311,22 @@ where
     } else {
         false
     }
+}
+
+// Mockable time
+#[inline]
+fn get_current_time() -> SystemTime {
+    #[cfg(any(test, feature = "mock-time-test"))]
+    {
+        MOCK_TIME.with(|t| t.borrow().unwrap_or_else(SystemTime::now))
+    }
+    #[cfg(not(any(test, feature = "mock-time-test")))]
+    {
+        SystemTime::now()
+    }
+}
+
+#[cfg(any(test, feature = "mock-time-test"))]
+thread_local! {
+    pub static MOCK_TIME: std::cell::RefCell<Option<SystemTime>> = const { std::cell::RefCell::new(None) };
 }
