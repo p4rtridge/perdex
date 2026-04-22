@@ -1,8 +1,9 @@
 use error_stack::Report;
 
-pub mod parse;
-mod serialize;
+pub mod header;
 pub mod sig;
+
+pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 /// Struct representation of the `Signature` HTTP header
 #[derive(Debug)]
@@ -24,6 +25,7 @@ pub struct SignatureHeader<'a, H> {
 }
 
 impl<'a, H> SignatureHeader<'a, H> {
+    /// Create a new `SignatureHeaderBuilder` to construct a `SignatureHeader`
     pub(crate) fn builder() -> SignatureHeaderBuilder<'a, H> {
         SignatureHeaderBuilder::default()
     }
@@ -47,6 +49,7 @@ pub(crate) struct SignatureHeaderBuilder<'a, H> {
 }
 
 impl<'a, H> SignatureHeaderBuilder<'a, H> {
+    /// Build the `SignatureHeader` from the provided values
     pub fn build(self) -> Result<SignatureHeader<'a, H>, Report<SignatureHeaderBuilderError>> {
         let key = self
             .key_id

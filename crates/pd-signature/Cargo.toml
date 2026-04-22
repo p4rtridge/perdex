@@ -5,17 +5,21 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+pd-blocking = { workspace = true }
+
 base64-simd = { workspace = true }
 const-oid = { workspace = true }
 error-stack = { workspace = true }
 http = { workspace = true }
 httpdate = { workspace = true }
-itertools = { workspace = true }
 logos = { workspace = true }
 miette = { workspace = true }
 pkcs8 = { workspace = true }
 ring = { workspace = true }
 thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
 
 [lints]
 workspace = true
