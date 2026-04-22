@@ -1,5 +1,5 @@
-use std::fmt::Write;
 use std::time::SystemTime;
+use std::{fmt::Write, time::Duration};
 
 use error_stack::{Report, ResultExt};
 use http::{HeaderValue, Method, Request, header::DATE};
@@ -10,9 +10,17 @@ use crate::{
     crypto,
 };
 
+const CLOCK_SKEW_ADJUSTMENT: Duration = Duration::from_secs(60); // 1 minute
+
 const SIGNATURE_HEADER: &str = "Signature";
+
+const MAX_ACCEPTED_SIGNATURE_AGE: Duration = Duration::from_secs(15 * 60); // 15 minutes
+
 const GET_HEADERS: &[&str] = &["host", "date"];
+const REQUIRED_GET_HEADERS: &[&str] = &["host"];
+
 const POST_HEADERS: &[&str] = &["host", "date", "content-type", "digest"];
+const REQUIRED_POST_HEADERS: &[&str] = &["host", "content-type", "digest"];
 
 #[derive(Debug, Error)]
 pub enum SigError {
@@ -25,14 +33,20 @@ pub enum SigError {
     #[error("Missing signature header")]
     MissingSignatureHeader,
 
+    #[error("Missing required headers in signature")]
+    MissingRequiredHeaders,
+
     #[error("Failed to get key: {0}")]
     GetKey(#[source] BoxError),
 
     #[error("Invalid key")]
     InvalidKey,
 
-    #[error("Failed to parse signature header")]
+    #[error("Invalid signature header")]
     InvalidSignatureHeader,
+
+    #[error("Signature expired")]
+    SignatureExpired,
 
     #[error("Unsupported HTTP method")]
     UnsupportedHttpMethod,
@@ -121,7 +135,9 @@ where
             .change_context(SigError::InvalidSignatureHeader)?,
     )
     .change_context(SigError::InvalidSignatureHeader)?;
+
     let encoded_signature = signature_header.signature.to_string();
+    is_safe(req, &signature_header)?;
 
     let signature_string =
         build_signature_string(req, &signature_header).change_context(SigError::BuildSigString)?;
@@ -206,4 +222,85 @@ where
     signature_string.pop();
 
     Ok(signature_string)
+}
+
+/// Perform a basic safety check on the signature header and the request
+fn is_safe<'a, B, H>(
+    req: &Request<B>,
+    signature_header: &SignatureHeader<'_, H>,
+) -> Result<(), SigError>
+where
+    H: Iterator<Item = &'a str> + Clone,
+{
+    let collected_headers = signature_header.headers.clone().collect::<Vec<_>>();
+
+    let is_subset = match *req.method() {
+        Method::GET => is_subset(REQUIRED_GET_HEADERS, &collected_headers),
+        Method::POST => is_subset(REQUIRED_POST_HEADERS, &collected_headers),
+        _ => return Err(SigError::UnsupportedHttpMethod),
+    };
+    if !is_subset {
+        return Err(SigError::MissingRequiredHeaders);
+    }
+
+    if !collected_headers.contains(&"date") && !collected_headers.contains(&"(created)") {
+        return Err(SigError::MissingRequiredHeaders);
+    }
+
+    // Move the current time forward a bit to allow for some clock skew between the signer and verifier
+    let now = SystemTime::now();
+    let signature_valid_duration = if let Some(expires) = signature_header.expires {
+        let expiration_timestamp =
+            SystemTime::UNIX_EPOCH + Duration::from_secs(expires) + CLOCK_SKEW_ADJUSTMENT;
+
+        std::cmp::min(
+            expiration_timestamp
+                .duration_since(now)
+                .map_err(|_| SigError::SignatureExpired)?,
+            MAX_ACCEPTED_SIGNATURE_AGE,
+        )
+    } else {
+        MAX_ACCEPTED_SIGNATURE_AGE
+    };
+
+    if let Some(created) = signature_header.created {
+        let created_time = SystemTime::UNIX_EPOCH + Duration::from_secs(created);
+        if now
+            .duration_since(created_time)
+            .unwrap_or_else(|_| Duration::from_secs(0))
+            > signature_valid_duration
+        {
+            return Err(SigError::SignatureExpired);
+        }
+    }
+
+    if let Some(date_header) = req.headers().get(DATE) {
+        let date_header_time = httpdate::parse_http_date(
+            date_header
+                .to_str()
+                .map_err(|_| SigError::InvalidSignatureHeader)?,
+        )
+        .map_err(|_| SigError::InvalidSignatureHeader)?;
+        if now
+            .duration_since(date_header_time)
+            .unwrap_or_else(|_| Duration::from_secs(0))
+            > signature_valid_duration
+        {
+            return Err(SigError::SignatureExpired);
+        }
+    }
+
+    Ok(())
+}
+
+#[inline]
+fn is_subset<I>(left: &[I], right: &[I]) -> bool
+where
+    I: PartialEq,
+{
+    if left.len() <= right.len() {
+        left.iter().all(|item| right.contains(item))
+    } else {
+        false
+    }
 }
