@@ -1768,6 +1768,8 @@ dependencies = [
  "futures-util",
  "hickory-resolver",
  "http",
+ "pd-signature",
+ "pkcs8 0.10.2",
  "reqwest",
  "serde",
  "simdutf8",

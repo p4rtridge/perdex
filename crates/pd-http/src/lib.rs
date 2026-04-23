@@ -47,6 +47,27 @@ impl Client {
             .change_context(Error::RequestExecution)?;
         Ok(Response::new(response, self.body_limit))
     }
+
+    /// Executes the given HTTP request and signs it using HTTP Signatures
+    ///
+    /// The headers need to include a `Digest` header if it's a POST request.
+    ///
+    /// # Errors
+    ///
+    /// - Signing the request failed
+    /// - Executing the request failed
+    pub async fn execute_signed(
+        &self,
+        request: http::Request<Body>,
+        key_id: &str,
+        private_key_der: &[u8],
+    ) -> Result<Response> {
+        let request = pd_signature::cavage::sig::sign(request, key_id, private_key_der)
+            .await
+            .change_context(Error::RequestBuild)?;
+
+        self.execute(request).await
+    }
 }
 
 /// A builder for `HttpClient`
