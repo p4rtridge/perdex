@@ -1,3 +1,4 @@
+pub mod generate;
 pub mod parse;
 mod sign;
 mod verify;

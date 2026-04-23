@@ -21,6 +21,7 @@ license = "MIT"
 pd-blocking = { path = "crates/pd-blocking" }
 pd-core = { path = "crates/pd-core" }
 pd-http = { path = "crates/pd-http" }
+pd-signature = { path = "crates/pd-signature" }
 pd-telemetry = { path = "crates/pd-telemetry" }
 
 async-stream = { version = "0.3" }
@@ -45,6 +46,7 @@ httpdate = { version = "1.0" }
 logos = { version = "0.16" }
 miette = { version = "7.6" }
 pkcs8 = { version = "0.10", features = ["pem", "std"] }
+rand = { version = "0.10" }
 rayon = { version = "1.12" }
 reqwest = { version = "0.13", features = [
     "stream",
@@ -54,6 +56,7 @@ reqwest = { version = "0.13", features = [
     "deflate",
 ] }
 ring = { version = "0.17", features = ["std"] }
+rsa = { version = "0.10.0-rc.17" }
 serde = { version = "1.0", features = ["derive"] }
 serde_with = { version = "3" }
 simdutf8 = { version = "0.1" }

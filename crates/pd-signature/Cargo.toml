@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[features]
+mock-time-test = []
+
 [dependencies]
 pd-blocking = { workspace = true }
 
@@ -15,14 +18,13 @@ httpdate = { workspace = true }
 logos = { workspace = true }
 miette = { workspace = true }
 pkcs8 = { workspace = true }
+rand = { workspace = true }
 ring = { workspace = true }
+rsa = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
-
-[features]
-mock-time-test = []
 
 [lints]
 workspace = true
