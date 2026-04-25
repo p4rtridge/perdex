@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use error_stack::ResultExt;
+use pd_signature::cavage::sig::SigExt;
 use reqwest::Request;
 
 pub use http;
@@ -62,7 +63,8 @@ impl Client {
         key_id: &str,
         private_key_der: &[u8],
     ) -> Result<Response> {
-        let request = pd_signature::cavage::sig::sign(request, key_id, private_key_der)
+        let request = request
+            .sign(key_id, private_key_der)
             .await
             .change_context(Error::RequestBuild)?;
 

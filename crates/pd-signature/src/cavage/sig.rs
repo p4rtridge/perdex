@@ -10,10 +10,9 @@ use crate::{
     crypto,
 };
 
-const CLOCK_SKEW_ADJUSTMENT: Duration = Duration::from_secs(60); // 1 minute
-
 const SIGNATURE_HEADER: &str = "Signature";
 
+const CLOCK_SKEW_ADJUSTMENT: Duration = Duration::from_secs(60); // 1 minute
 const MAX_ACCEPTED_SIGNATURE_AGE: Duration = Duration::from_secs(15 * 60); // 15 minutes
 
 const GET_HEADERS: &[&str] = &["host", "date"];
@@ -21,6 +20,36 @@ const REQUIRED_GET_HEADERS: &[&str] = &["host"];
 
 const POST_HEADERS: &[&str] = &["host", "date", "content-type", "digest"];
 const REQUIRED_POST_HEADERS: &[&str] = &["host", "content-type", "digest"];
+
+pub trait SigExt {
+    /// Sign an HTTP request using the provided signing key
+    ///
+    /// The key parameter has to be an PEM-encoded private key in the PKCS#8 format
+    ///
+    /// This will fail if the key algorithm is unsupported
+    ///
+    /// Currently supported algorithms:
+    /// - RSA
+    /// - Ed25519 (PKCS#8 v2 only)
+    fn sign(self, key_id: &str, key: &[u8]) -> impl Future<Output = Result<Self, Report<SigError>>>
+    where
+        Self: Sized;
+
+    /// Verify an HTTP requests signature using the provided key closure
+    ///
+    /// The closure is expected to return a future which resolves into a result which contains a PEM-encoded PKCS#8 verifying key.
+    ///
+    /// This will fail if the key algorithm is unsupported
+    ///
+    /// Currently supported algorithms:
+    /// - RSA
+    /// - Ed25519 (PKCS#8 v2 only)
+    fn verify<F, Fut>(&self, get_key: F) -> impl Future<Output = Result<(), Report<SigError>>>
+    where
+        Self: Sized,
+        F: Fn(&str) -> Fut,
+        Fut: Future<Output = Result<Vec<u8>, BoxError>>;
+}
 
 #[derive(Debug, Error)]
 pub enum SigError {
@@ -61,16 +90,26 @@ pub enum SigError {
     Verify,
 }
 
-/// Sign an HTTP request using the provided signing key
-///
-/// The key parameter has to be an PEM-encoded private key in the PKCS#8 format
-///
-/// This will fail if the key algorithm is unsupported
-///
-/// Currently supported algorithms:
-/// - RSA
-/// - Ed25519 (PKCS#8 v2 only)
-pub async fn sign<B>(
+impl<B> SigExt for Request<B> {
+    async fn sign(self, key_id: &str, key: &[u8]) -> Result<Self, Report<SigError>>
+    where
+        Self: Sized,
+    {
+        sign(self, key_id, key).await
+    }
+
+    async fn verify<F, Fut>(&self, get_key: F) -> Result<(), Report<SigError>>
+    where
+        Self: Sized,
+        F: Fn(&str) -> Fut,
+        Fut: Future<Output = Result<Vec<u8>, BoxError>>,
+    {
+        verify(self, get_key).await
+    }
+}
+
+#[inline]
+async fn sign<B>(
     mut req: Request<B>,
     key_id: &str,
     key: &[u8],
@@ -116,16 +155,8 @@ pub async fn sign<B>(
     Ok(req)
 }
 
-/// Verify an HTTP requests signature using the provided key closure
-///
-/// The closure is expected to return a future which resolves into a result which contains a PEM-encoded PKCS#8 verifying key.
-///
-/// This will fail if the key algorithm is unsupported
-///
-/// Currently supported algorithms:
-/// - RSA
-/// - Ed25519 (PKCS#8 v2 only)
-pub async fn verify<B, F, Fut, E>(req: &Request<B>, get_key: F) -> Result<(), Report<SigError>>
+#[inline]
+async fn verify<B, F, Fut, E>(req: &Request<B>, get_key: F) -> Result<(), Report<SigError>>
 where
     F: Fn(&str) -> Fut,
     Fut: Future<Output = Result<Vec<u8>, E>>,

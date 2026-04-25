@@ -3,7 +3,7 @@ use const_oid::db::{rfc5912::RSA_ENCRYPTION, rfc8410::ID_ED_25519};
 use error_stack::Report;
 use pkcs8::{
     DecodePrivateKey, Document, PrivateKeyInfo, SecretDocument, SubjectPublicKeyInfoRef,
-    der::Decode,
+    der::{Decode, asn1::OctetStringRef},
 };
 use ring::signature::{
     ED25519, Ed25519KeyPair, RSA_PKCS1_2048_8192_SHA256, RsaKeyPair, UnparsedPublicKey,
@@ -82,11 +82,16 @@ pub fn private_key(der: &[u8]) -> Result<SigningKey, Report<ParseError>> {
 
     let signing_key = match private_key_raw.algorithm.oid {
         RSA_ENCRYPTION => SigningKey::Rsa(
-            RsaKeyPair::from_pkcs8(private_key_raw.private_key).map_err(ParseError::KeyRejected)?,
+            RsaKeyPair::from_der(private_key_raw.private_key).map_err(ParseError::KeyRejected)?,
         ),
         ID_ED_25519 => SigningKey::Ed25519(
-            Ed25519KeyPair::from_pkcs8(private_key_raw.private_key)
-                .map_err(ParseError::KeyRejected)?,
+            Ed25519KeyPair::from_seed_and_public_key(
+                OctetStringRef::from_der(private_key_raw.private_key)
+                    .map_err(ParseError::MalformedDer)?
+                    .as_bytes(),
+                private_key_raw.public_key.ok_or(ParseError::MalformedKey)?,
+            )
+            .map_err(ParseError::KeyRejected)?,
         ),
         _ => return Err(Report::new(ParseError::UnsupportedKeyType)),
     };
