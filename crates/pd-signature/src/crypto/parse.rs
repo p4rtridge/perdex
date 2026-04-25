@@ -76,20 +76,20 @@ pub fn public_key(der: &[u8]) -> Result<UnparsedPublicKey<Vec<u8>>, Report<Parse
 /// - Ed25519 (PKCS#8 v2 only)
 pub fn private_key(der: &[u8]) -> Result<SigningKey, Report<ParseError>> {
     let document = SecretDocument::from_pkcs8_der(der).map_err(ParseError::MalformedPkcs8)?;
-    let private_key_raw = document
+    let pki = document
         .decode_msg::<PrivateKeyInfo<'_>>()
         .map_err(ParseError::MalformedDer)?;
 
-    let signing_key = match private_key_raw.algorithm.oid {
-        RSA_ENCRYPTION => SigningKey::Rsa(
-            RsaKeyPair::from_der(private_key_raw.private_key).map_err(ParseError::KeyRejected)?,
-        ),
+    let signing_key = match pki.algorithm.oid {
+        RSA_ENCRYPTION => {
+            SigningKey::Rsa(RsaKeyPair::from_der(pki.private_key).map_err(ParseError::KeyRejected)?)
+        }
         ID_ED_25519 => SigningKey::Ed25519(
             Ed25519KeyPair::from_seed_and_public_key(
-                OctetStringRef::from_der(private_key_raw.private_key)
+                OctetStringRef::from_der(pki.private_key)
                     .map_err(ParseError::MalformedDer)?
                     .as_bytes(),
-                private_key_raw.public_key.ok_or(ParseError::MalformedKey)?,
+                pki.public_key.ok_or(ParseError::MalformedKey)?,
             )
             .map_err(ParseError::KeyRejected)?,
         ),

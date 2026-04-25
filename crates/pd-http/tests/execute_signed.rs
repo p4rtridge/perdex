@@ -1,10 +1,6 @@
 use http::{Method, Request};
 use pd_http::Client;
-use pkcs8::{
-    PrivateKeyInfo, SecretDocument,
-    der::{Encode, oid::db::rfc5912::RSA_ENCRYPTION},
-    spki::AlgorithmIdentifier,
-};
+use pkcs8::SecretDocument;
 use reqwest::Body;
 use wiremock::{Mock, MockServer, matchers::any};
 
@@ -33,20 +29,12 @@ async fn test_execute_signed() {
 
     let private_key_pem = include_str!("../../pd-signature/tests/key/private_rsa.pem");
     let (_tag, document) = SecretDocument::from_pem(private_key_pem).unwrap();
-    let private_key = PrivateKeyInfo {
-        algorithm: AlgorithmIdentifier {
-            oid: RSA_ENCRYPTION,
-            parameters: None,
-        },
-        private_key: document.as_bytes(),
-        public_key: None,
-    };
 
     let response = client
         .execute_signed(
             request,
             "https://my-server.com/users/alice#main-key",
-            &private_key.to_der().unwrap(),
+            document.as_bytes(),
         )
         .await
         .unwrap();
