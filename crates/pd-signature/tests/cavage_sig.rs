@@ -90,7 +90,7 @@ async fn with_rsa_expire() {
 
     let signed_req = req.sign("Test", &get_rsa_private_key()).await.unwrap();
 
-    cavage::sig::MOCK_TIME.with(|t: &std::cell::RefCell<Option<SystemTime>>| {
+    pd_signature::cavage::sig::MOCK_TIME.with(|t: &std::cell::RefCell<Option<SystemTime>>| {
         *t.borrow_mut() = Some(SystemTime::now() + Duration::from_mins(30))
     });
 

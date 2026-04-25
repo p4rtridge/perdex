@@ -32,8 +32,8 @@ where
 
 macro_rules! define_rayon_pool {
     (name: $name:ident, description: $description:literal) => {
-        #[inline]
         #[doc = $description]
+        #[inline]
         pub async fn $name<F, O>(func: F) -> Result<O, Error>
         where
             F: FnOnce() -> O + Send + 'static,

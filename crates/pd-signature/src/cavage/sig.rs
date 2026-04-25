@@ -51,6 +51,20 @@ pub trait SigExt {
         Fut: Future<Output = Result<Vec<u8>, BoxError>>;
 }
 
+impl<B> SigExt for Request<B> {
+    async fn sign(self, key_id: &str, key: &[u8]) -> Result<Self, Report<SigError>> {
+        sign(self, key_id, key).await
+    }
+
+    async fn verify<F, Fut>(&self, get_key: F) -> Result<(), Report<SigError>>
+    where
+        F: Fn(&str) -> Fut,
+        Fut: Future<Output = Result<Vec<u8>, BoxError>>,
+    {
+        verify(self, get_key).await
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum SigError {
     #[error("Blocking error")]
@@ -90,24 +104,6 @@ pub enum SigError {
     Verify,
 }
 
-impl<B> SigExt for Request<B> {
-    async fn sign(self, key_id: &str, key: &[u8]) -> Result<Self, Report<SigError>>
-    where
-        Self: Sized,
-    {
-        sign(self, key_id, key).await
-    }
-
-    async fn verify<F, Fut>(&self, get_key: F) -> Result<(), Report<SigError>>
-    where
-        Self: Sized,
-        F: Fn(&str) -> Fut,
-        Fut: Future<Output = Result<Vec<u8>, BoxError>>,
-    {
-        verify(self, get_key).await
-    }
-}
-
 #[inline]
 async fn sign<B>(
     mut req: Request<B>,
@@ -115,7 +111,7 @@ async fn sign<B>(
     key: &[u8],
 ) -> Result<Request<B>, Report<SigError>> {
     // Overwrite the date header with the current time
-    let date_header = HeaderValue::from_str(&httpdate::fmt_http_date(SystemTime::now()))
+    let date_header = HeaderValue::from_str(&httpdate::fmt_http_date(get_current_time()))
         .expect("Failed to format date header value");
     req.headers_mut().insert(DATE, date_header);
 
@@ -202,7 +198,8 @@ pub enum BuildError {
 }
 
 /// Build a signature string from a parsed signature header and an HTTP request
-pub fn build_signature_string<'a, B, H>(
+#[inline]
+fn build_signature_string<'a, B, H>(
     request: &Request<B>,
     signature_header: &SignatureHeader<'_, H>,
 ) -> Result<String, Report<BuildError>>
