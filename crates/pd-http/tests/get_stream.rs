@@ -1,27 +1,28 @@
+use std::convert::Infallible;
+
+use bytes::Bytes;
 use futures_util::StreamExt;
-use http::{Method, Request};
-use pd_http::Client;
-use reqwest::Body;
-use wiremock::{Mock, MockServer};
+use http_body_util::Full;
+use hyper::{Request, Response};
+use pd_http::{Body, Client};
 
 #[tokio::test]
 async fn get_stream() {
-    let mock_server = MockServer::start().await;
-
     let fake_data = vec![5u8; 4096];
-    Mock::given(wiremock::matchers::method("GET"))
-        .and(wiremock::matchers::path("/stream"))
-        .respond_with(wiremock::ResponseTemplate::new(200).set_body_bytes(fake_data.clone()))
-        .mount(&mock_server)
-        .await;
+    let fake_data_clone = fake_data.clone();
+    let svc = tower::service_fn(move |request: Request<_>| {
+        assert_eq!(request.uri().path(), "/stream");
+        let fake_data = fake_data.clone();
+        async move { Ok::<_, Infallible>(Response::new(Full::new(Bytes::from(fake_data)))) }
+    });
 
-    let url = format!("{}/stream", &mock_server.uri());
-    let client = Client::builder().build().unwrap();
+    let client = Client::builder().service(svc);
+
     let request = Request::builder()
-        .method(Method::GET)
-        .uri(url)
-        .body(Body::default())
+        .uri("https://example.com/stream")
+        .body(Body::empty())
         .unwrap();
+
     let mut stream = client.execute(request).await.unwrap().stream().await;
 
     let mut downloaded = Vec::new();
@@ -31,6 +32,6 @@ async fn get_stream() {
         downloaded.extend_from_slice(&chunk);
     }
 
-    assert_eq!(downloaded.len(), fake_data.len());
-    assert_eq!(downloaded.as_slice(), fake_data.as_slice());
+    assert_eq!(downloaded.len(), fake_data_clone.len());
+    assert_eq!(downloaded.as_slice(), fake_data_clone.as_slice());
 }

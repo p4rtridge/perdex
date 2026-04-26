@@ -1,150 +1,101 @@
 use async_stream::try_stream;
-use bytes::{Bytes, BytesMut};
-use error_stack::{ResultExt, bail};
-use futures_util::{StreamExt, stream::BoxStream};
-use http::{HeaderMap, StatusCode, Version};
+use bytes::{Buf, Bytes};
+use futures_util::{Stream, StreamExt};
+use http::{Extensions, HeaderMap, StatusCode, Version};
+use http_body_util::{BodyExt, BodyStream};
+use hyper::Response as HyperResponse;
 use serde::de::DeserializeOwned;
 
-use crate::error::{Error, Result};
-
-const INITIAL_BUFFER_SIZE: usize = 8 * 1024; // 8 KiB
+use crate::{
+    BoxBody,
+    error::{HttpError, Result},
+};
 
 /// A Response to a submitted `Request`.
 pub struct Response {
-    inner: reqwest::Response,
-    body_limit: Option<usize>,
+    inner: HyperResponse<BoxBody>,
 }
 
 impl Response {
+    /// Creates a new [`Response`] from a [`HyperResponse<BoxBody>`].
+    #[inline]
     #[must_use]
-    pub fn new(inner: reqwest::Response, body_limit: Option<usize>) -> Self {
-        Self { inner, body_limit }
+    pub fn new(inner: HyperResponse<BoxBody>) -> Self {
+        Self { inner }
     }
 
-    /// Get the `StatusCode` of this `Response`.
+    /// Consumes the [`Response`] and returns the response body as a [`Bytes`] buffer.
     #[inline]
-    pub fn status(&self) -> StatusCode {
-        self.inner.status()
-    }
-
-    /// Get the HTTP `Version` of this `Response`.
-    #[inline]
-    pub fn version(&self) -> Version {
-        self.inner.version()
-    }
-
-    /// Get the `Headers` of this `Response`.
-    #[inline]
-    pub fn headers(&self) -> &HeaderMap {
-        self.inner.headers()
-    }
-
-    /// Get a mutable reference to the `Headers` of this `Response`.
-    #[inline]
-    pub fn headers_mut(&mut self) -> &mut HeaderMap {
-        self.inner.headers_mut()
-    }
-
-    /// Get the content length of the response, if it is known.
-    ///
-    /// This value does not directly represents the value of the `Content-Length`
-    /// header, but rather the size of the response's body. To read the header's
-    /// value, please use the [`Response::headers`] method instead.
-    ///
-    /// Reasons it may not be known:
-    ///
-    /// - The response does not include a body (e.g. it responds to a `HEAD`
-    ///   request).
-    /// - The response is gzipped and automatically decoded (thus changing the
-    ///   actual decoded length).
-    #[inline]
-    pub fn content_length(&self) -> Option<u64> {
-        self.inner.content_length()
-    }
-
-    /// Get the full response body as `Bytes`.
-    pub async fn bytes(mut self) -> Result<Bytes> {
-        let mut validator = BodyLimit::new(self.content_length(), self.body_limit)?;
-
-        let mut bytes = BytesMut::with_capacity(INITIAL_BUFFER_SIZE);
-        while let Some(chunk) = self
+    pub async fn bytes(self) -> Result<Bytes> {
+        Ok(self
             .inner
-            .chunk()
+            .collect()
             .await
-            .change_context(Error::ResponseRead)?
-        {
-            validator.validate(chunk.len())?;
-            bytes.extend_from_slice(&chunk);
-        }
-        Ok(bytes.freeze())
+            .map_err(HttpError::BodyRead)?
+            .to_bytes())
     }
 
-    /// Stream a chunk of the response body.
-    pub async fn stream(self) -> BoxStream<'static, Result<Bytes>> {
-        let inner = self.inner;
-        let limit = self.body_limit;
-
-        try_stream! {
-            let mut validator = BodyLimit::new(inner.content_length(), limit)?;
-            let mut stream = inner.bytes_stream();
-
-            while let Some(chunk) = stream.next().await {
-                let chunk = chunk.change_context(Error::ResponseRead)?;
-                validator.validate(chunk.len())?;
-                yield chunk;
-            }
-        }
-        .boxed()
-    }
-
-    /// Read the body and attempt to interpret it as a UTF-8 encoded string
+    /// Consumes the [`Response`] and returns the response body as a [`String`].
+    #[inline]
     pub async fn text(self) -> Result<String> {
         let bytes = self.bytes().await?;
-        let text = simdutf8::basic::from_utf8(&bytes)
-            .change_context(Error::ResponseRead)?
-            .to_string();
-        Ok(text)
+        simdutf8::basic::from_utf8(&bytes)
+            .map(ToOwned::to_owned)
+            .map_err(HttpError::TextDecoding)
     }
 
-    /// Try to deserialize the response body as JSON.
+    /// Consumes the [`Response`] and deserializes the response body as JSON into the specified type `T`.
+    #[inline]
     pub async fn json<T>(self) -> Result<T>
     where
         T: DeserializeOwned,
     {
         let bytes = self.bytes().await?;
-        sonic_rs::from_slice(&bytes).change_context(Error::ResponseRead)
-    }
-}
-
-/// A helper struct to enforce body size limits on responses.
-#[derive(Debug)]
-struct BodyLimit {
-    limit: Option<usize>,
-    bytes_read: usize,
-}
-
-impl BodyLimit {
-    fn new(content_length: Option<u64>, limit: Option<usize>) -> Result<Self> {
-        if let Some(limit) = limit
-            && let Some(content_length) = content_length
-            && content_length > limit as u64
-        {
-            bail!(Error::BodyLimitExceeded(limit));
-        }
-
-        Ok(Self {
-            limit,
-            bytes_read: 0,
-        })
+        sonic_rs::from_slice(&bytes).map_err(HttpError::JsonDeserialization)
     }
 
-    fn validate(&mut self, chunk_size: usize) -> Result<()> {
-        if let Some(limit) = self.limit {
-            self.bytes_read += chunk_size;
-            if self.bytes_read > limit {
-                bail!(Error::BodyLimitExceeded(limit));
+    /// Consumes the [`Response`] and returns a stream of response body chunks as [`Bytes`].
+    pub async fn stream(self) -> impl Stream<Item = Result<Bytes>> {
+        let mut body_stream = BodyStream::new(self.inner.into_body());
+
+        try_stream! {
+            while let Some(frame) = body_stream.next().await {
+                match frame.map_err(HttpError::StreamRead)?.into_data() {
+                    Ok(chunk) if chunk.has_remaining() => yield chunk,
+                    Ok(..) | Err(..) => continue, // Skip empty chunks and non-data frames
+                }
             }
         }
-        Ok(())
+        .boxed()
+    }
+
+    /// Get the [`StatusCode`] of this [`Response`].
+    #[inline]
+    pub fn status(&self) -> StatusCode {
+        self.inner.status()
+    }
+
+    /// Get the HTTP [`Version`] of this [`Response`].
+    #[inline]
+    pub fn version(&self) -> Version {
+        self.inner.version()
+    }
+
+    /// Get the [`HeaderMap`] of this [`Response`].
+    #[inline]
+    pub fn headers(&self) -> &HeaderMap {
+        self.inner.headers()
+    }
+
+    /// Get a mutable reference to the [`HeaderMap`] of this [`Response`].
+    #[inline]
+    pub fn headers_mut(&mut self) -> &mut HeaderMap {
+        self.inner.headers_mut()
+    }
+
+    /// Returns a mutable reference to the associated extensions.
+    #[inline]
+    pub fn extensions_mut(&mut self) -> &mut Extensions {
+        self.inner.extensions_mut()
     }
 }

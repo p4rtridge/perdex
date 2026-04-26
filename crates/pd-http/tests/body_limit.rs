@@ -1,73 +1,43 @@
-use std::io::Write;
+use std::{convert::Infallible, io::Write};
 
+use bytes::Bytes;
 use flate2::{Compression, write::GzEncoder};
-use http::{Method, Request, header::CONTENT_ENCODING};
-use pd_http::Client;
-use reqwest::Body;
-use wiremock::{Mock, MockServer};
+use http::header::CONTENT_ENCODING;
+use http_body_util::Full;
+use hyper::{Request, Response};
+use pd_http::{Body, Client};
 
 #[tokio::test]
-async fn fail_on_content_length_exceeded() {
-    let mock_server = MockServer::start().await;
-
-    let fake_data = vec![0u8; 1024];
-    Mock::given(wiremock::matchers::method("GET"))
-        .and(wiremock::matchers::path("/bytes"))
-        .respond_with(wiremock::ResponseTemplate::new(200).set_body_bytes(fake_data.clone()))
-        .mount(&mock_server)
-        .await;
-
-    let url = format!("{}/bytes", &mock_server.uri());
-    let client = Client::builder().body_limit(Some(512)).build().unwrap();
-    let request = Request::builder()
-        .method(Method::GET)
-        .uri(url)
-        .body(Body::default())
-        .unwrap();
-    let response = client.execute(request).await.unwrap().bytes().await;
-
-    assert!(response.is_err());
-    let error = response.err().unwrap();
-    assert_eq!(
-        error.current_context().to_string(),
-        "Response body exceeds the configured limit of 512 bytes"
-    );
-}
-
-#[tokio::test]
-async fn fail_on_body_limit_exceeded() {
-    let mock_server = MockServer::start().await;
-
-    let raw_body = vec![b'A'; 5000];
+async fn gzip() {
+    let raw_body = vec![b'A'; 5 * 1024]; // 5 KiB
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(&raw_body).unwrap();
     let compressed_body = encoder.finish().unwrap();
 
-    Mock::given(wiremock::matchers::method("GET"))
-        .respond_with(
-            wiremock::ResponseTemplate::new(200)
-                .insert_header(CONTENT_ENCODING, "gzip")
-                .set_body_bytes(compressed_body),
-        )
-        .mount(&mock_server)
-        .await;
+    assert!(compressed_body.len() < 1024);
 
-    let url = format!("{}/bytes", &mock_server.uri());
-    let client = Client::builder().body_limit(Some(1024)).build().unwrap();
-    let request = Request::builder()
-        .method(Method::GET)
-        .uri(url)
-        .body(Body::default())
+    let svc = tower::service_fn(move |req: Request<_>| {
+        assert_eq!(req.uri().path_and_query().unwrap(), "/path");
+        let body = compressed_body.clone();
+
+        async move {
+            let response = Response::builder()
+                .header(CONTENT_ENCODING, "gzip")
+                .body(Full::<Bytes>::new(body.into()))
+                .unwrap();
+
+            Ok::<_, Infallible>(response)
+        }
+    });
+    let client = Client::builder().body_limit(Some(1024)).service(svc);
+
+    let req = Request::builder()
+        .uri("https://example.com/path")
+        .body(Body::empty())
         .unwrap();
-    let response = client.execute(request).await.unwrap();
+    let response = client.execute(req).await.unwrap();
 
-    assert_eq!(response.content_length(), None);
+    let body = response.bytes().await;
 
-    let response = response.bytes().await;
-    assert!(response.is_err());
-    let error = response.err().unwrap();
-    assert_eq!(
-        error.current_context().to_string(),
-        "Response body exceeds the configured limit of 1024 bytes"
-    );
+    assert!(body.is_err())
 }

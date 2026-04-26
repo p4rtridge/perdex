@@ -9,21 +9,26 @@ pd-signature = { workspace = true }
 
 async-stream = { workspace = true }
 bytes = { workspace = true }
-error-stack = { workspace = true }
 futures-util = { workspace = true }
 hickory-resolver = { workspace = true }
 http = { workspace = true }
-reqwest = { workspace = true }
+http-body = { workspace = true }
+http-body-util = { workspace = true }
+hyper = { workspace = true }
+hyper-rustls = { workspace = true }
+hyper-util = { workspace = true }
+pin-project-lite = { workspace = true }
 serde = { workspace = true }
 simdutf8 = { workspace = true }
 sonic-rs = { workspace = true }
 thiserror = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
 
 [dev-dependencies]
 flate2 = { workspace = true }
-tokio = { workspace = true }
-wiremock = { workspace = true }
 pkcs8 = { workspace = true }
+tokio = { workspace = true }
 
 [lints]
 workspace = true

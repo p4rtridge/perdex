@@ -1,30 +1,52 @@
-use http::{Method, Request};
-use pd_http::Client;
+use std::convert::Infallible;
+
+use bytes::Bytes;
+use http::Method;
+use http_body_util::Full;
+use hyper::{Request, Response};
+use pd_http::{Body, Client};
 use pkcs8::SecretDocument;
-use reqwest::Body;
-use wiremock::{Mock, MockServer, matchers::any};
 
 #[tokio::test]
 async fn test_execute_signed() {
-    let mock_server = MockServer::start().await;
+    let json_data = sonic_rs::json!({"key": "value"});
+    let svc = tower::service_fn(move |request: Request<_>| {
+        assert_eq!(request.method(), Method::POST);
+        assert_eq!(request.uri().path(), "/inbox");
+        assert_eq!(request.headers().get("Host").unwrap(), "my-server.com");
+        assert_eq!(
+            request.headers().get("Content-Type").unwrap(),
+            "application/activity+json"
+        );
+        assert_eq!(
+            request.headers().get("Digest").unwrap(),
+            "SHA-256=X48E9qOokqqrvdts8nOJRJN3OWDUoyWxBf7kbu9DBPE="
+        );
+        let signature_header = request
+            .headers()
+            .get("Signature")
+            .unwrap()
+            .to_str()
+            .unwrap();
+        assert!(signature_header.contains("keyId=\"https://my-server.com/users/alice#main-key\""));
+        assert!(signature_header.contains("headers=\"host date content-type digest\""));
 
-    Mock::given(any())
-        .respond_with(wiremock::ResponseTemplate::new(200))
-        .mount(&mock_server)
-        .await;
+        let json_data = json_data.clone();
+        async move { Ok::<_, Infallible>(Response::new(Full::new(Bytes::from(json_data.to_string())))) }
+    });
 
-    let url = format!("{}/inbox", &mock_server.uri());
-    let client = Client::builder().build().unwrap();
+    let client = Client::builder().service(svc);
+
     let request = Request::builder()
         .method(Method::POST)
-        .uri(url)
-        .header("Host", mock_server.address().to_string())
+        .uri("https://my-server.com/inbox")
+        .header("Host", "my-server.com")
         .header("Content-Type", "application/activity+json")
         .header(
             "Digest",
             "SHA-256=X48E9qOokqqrvdts8nOJRJN3OWDUoyWxBf7kbu9DBPE=",
         )
-        .body(Body::default())
+        .body(Body::empty())
         .unwrap();
 
     let private_key_pem = include_str!("../../pd-signature/tests/key/private_rsa.pem");
@@ -40,24 +62,4 @@ async fn test_execute_signed() {
         .unwrap();
 
     assert!(response.status().is_success());
-
-    // Verify the request received by wiremock
-    let requests = mock_server.received_requests().await;
-    assert!(requests.is_some());
-    let requests = requests.unwrap();
-    assert_eq!(requests.len(), 1);
-
-    let received_req = &requests[0];
-
-    assert!(received_req.headers.contains_key("signature"));
-    assert!(received_req.headers.contains_key("date"));
-
-    let signature_header = received_req
-        .headers
-        .get("signature")
-        .unwrap()
-        .to_str()
-        .unwrap();
-    assert!(signature_header.contains("keyId=\"https://my-server.com/users/alice#main-key\""));
-    assert!(signature_header.contains("headers=\"host date content-type digest\""));
 }
