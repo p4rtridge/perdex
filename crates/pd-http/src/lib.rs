@@ -1,5 +1,5 @@
-use std::error::Error as StdError;
 use std::time::Duration;
+use std::{error::Error as StdError, sync::Arc};
 
 use bytes::Bytes;
 use http::{HeaderMap, Request, StatusCode};
@@ -7,8 +7,8 @@ use http_body_util::Limited;
 use hyper::{Request as HyperRequest, Response as HyperResponse};
 use hyper_rustls::HttpsConnectorBuilder;
 use hyper_util::{
-    client::legacy::connect::HttpConnector,
-    {client::legacy::Client as HyperClient, rt::TokioExecutor},
+    client::legacy::{Client as HyperClient, connect::HttpConnector},
+    rt::{TokioExecutor, TokioTimer},
 };
 use pd_signature::cavage::sig::SigExt;
 use tower::{
@@ -36,8 +36,11 @@ pub mod response;
 
 pub(crate) type BoxBody<E = BoxError> = http_body_util::combinators::BoxBody<Bytes, E>;
 
-const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
+// Keep idle connections low to avoid exhausting file descriptors (ulimit) while still allowing some reuse for performance
+const DEFAULT_POOL_IDLE_TIMEOUT: Duration = Duration::from_secs(90);
+const DEFAULT_MAX_IDLE_PER_HOST: usize = 32;
 const DEFAULT_BODY_LIMIT: usize = 1024 * 1024; // 1 MiB
+const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30); // Same as firefox
 const DEFAULT_USER_AGENT: &str = "pd-http/0.1.0"; // TODO: Use actual version
 
 /// An HTTP client for making requests to other servers, with support for features like:
@@ -47,10 +50,12 @@ const DEFAULT_USER_AGENT: &str = "pd-http/0.1.0"; // TODO: Use actual version
 /// - Configurable default headers
 /// - Configurable maximum response body size
 /// - HTTP Signatures for request signing
+///
+/// [`Client`] is cheap to clone and is designed to be shared across the application.
 #[derive(Clone)]
 pub struct Client {
-    default_headers: HeaderMap,
-    inner: BoxCloneService<HyperRequest<Body>, HyperResponse<BoxBody>, BoxError>,
+    default_headers: Arc<HeaderMap>,
+    svc: BoxCloneService<HyperRequest<Body>, HyperResponse<BoxBody>, BoxError>,
 }
 
 impl Client {
@@ -65,7 +70,7 @@ impl Client {
     pub async fn execute(&self, request: Request<Body>) -> Result<Response> {
         let request = self.prepare_request(request);
 
-        let ready_svc = self.inner.clone();
+        let ready_svc = self.svc.clone();
         let response = ready_svc
             .oneshot(request)
             .await
@@ -98,7 +103,11 @@ impl Client {
 
     #[inline]
     fn prepare_request(&self, mut request: Request<Body>) -> Request<Body> {
-        request.headers_mut().extend(self.default_headers.clone());
+        request.headers_mut().extend(
+            self.default_headers
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone())),
+        );
         request
     }
 }
@@ -106,15 +115,19 @@ impl Client {
 /// A builder for `HttpClient`
 #[derive(Debug)]
 pub struct ClientBuilder {
-    dns_resolver: Option<Resolver>,
     body_limit: Option<usize>,
     default_headers: http::HeaderMap,
+    dns_resolver: Option<Resolver>,
+    max_idle_per_host: Option<usize>,
+    pool_idle_timeout: Option<Duration>,
     timeout: Option<Duration>,
 }
 
 impl ClientBuilder {
     /// Build the [`Client`]
     pub fn build(mut self) -> Client {
+        let max_idle_per_host = self.max_idle_per_host.unwrap_or(DEFAULT_MAX_IDLE_PER_HOST);
+
         let dns_resolver = self
             .dns_resolver
             .take()
@@ -127,6 +140,9 @@ impl ClientBuilder {
             .wrap_connector(HttpConnector::new_with_resolver(dns_resolver));
 
         let client = HyperClient::builder(TokioExecutor::new())
+            .pool_idle_timeout(self.pool_idle_timeout)
+            .pool_max_idle_per_host(max_idle_per_host)
+            .pool_timer(TokioTimer::new())
             .build(connector)
             .map_response(|res| {
                 let (parts, body) = res.into_parts();
@@ -178,16 +194,9 @@ impl ClientBuilder {
         let service = BoxCloneService::new(service);
 
         Client {
-            default_headers: self.default_headers,
-            inner: service,
+            default_headers: self.default_headers.into(),
+            svc: service,
         }
-    }
-
-    /// Sets a custom DNS resolver for the HTTP client.
-    #[must_use]
-    pub fn dns_resolver(mut self, resolver: Resolver) -> Self {
-        self.dns_resolver = Some(resolver);
-        self
     }
 
     /// Sets a maximum body size limit for HTTP responses. If the response body exceeds this limit, an error will be returned.
@@ -196,6 +205,15 @@ impl ClientBuilder {
     #[must_use]
     pub fn body_limit(mut self, limit: Option<usize>) -> Self {
         self.body_limit = limit;
+        self
+    }
+
+    /// Sets a custom DNS resolver for the HTTP client.
+    ///
+    /// The default DNS resolver is QUAD9
+    #[must_use]
+    pub fn dns_resolver(mut self, resolver: Resolver) -> Self {
+        self.dns_resolver = Some(resolver);
         self
     }
 
@@ -226,10 +244,30 @@ impl ClientBuilder {
         self.default_header(http::header::USER_AGENT, value)
     }
 
-    /// Sets a timeout for all requests made by the client
+    /// Sets the maximum number of idle connections to keep per host in the connection pool.
+    ///
+    /// The default maximum idle connections per host is 32.
     #[must_use]
-    pub fn timeout(mut self, timeout: Duration) -> Self {
-        self.timeout = Some(timeout);
+    pub fn max_idle_per_host(mut self, max: Option<usize>) -> Self {
+        self.max_idle_per_host = max;
+        self
+    }
+
+    /// Sets a timeout for idle connections in the connection pool. Idle connections will be closed after this duration.
+    ///
+    /// The default pool idle timeout is 30 seconds.
+    #[must_use]
+    pub fn pool_idle_timeout(mut self, duration: Option<Duration>) -> Self {
+        self.pool_idle_timeout = duration;
+        self
+    }
+
+    /// Sets a timeout for all requests made by the client
+    ///
+    /// The default timeout is 30 seconds.
+    #[must_use]
+    pub fn timeout(mut self, duration: Option<Duration>) -> Self {
+        self.timeout = duration;
         self
     }
 }
@@ -237,9 +275,11 @@ impl ClientBuilder {
 impl Default for ClientBuilder {
     fn default() -> Self {
         Self {
-            dns_resolver: None,
             body_limit: Some(DEFAULT_BODY_LIMIT),
             default_headers: http::HeaderMap::new(),
+            dns_resolver: None,
+            max_idle_per_host: Some(DEFAULT_MAX_IDLE_PER_HOST),
+            pool_idle_timeout: Some(DEFAULT_POOL_IDLE_TIMEOUT),
             timeout: Some(DEFAULT_TIMEOUT),
         }
     }
