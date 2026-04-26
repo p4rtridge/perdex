@@ -1,12 +1,10 @@
 use error_stack::{Report, ResultExt};
+use http::{HeaderValue, Method, Request, StatusCode, header::ACCEPT};
 use pd_core::account::{
     model::{AccountResolutionError, AccountResource},
     traits::AccountResolver,
 };
-use pd_http::{
-    Body, Client,
-    http::{HeaderValue, Method, Request, StatusCode, header::ACCEPT},
-};
+use pd_http::{Body, Client};
 use typed_builder::TypedBuilder;
 
 use crate::ap_type::webfinger::Resource;
@@ -38,7 +36,7 @@ impl AccountResolver for Webfinger {
                 .method(Method::GET)
                 .header(ACCEPT, ACCEPT_JRD_VALUE)
                 .uri(webfinger_uri)
-                .body(Body::default())
+                .body(Body::empty())
                 .expect("Failed to build WebFinger request");
             let response = self.http_client.execute(request).await.change_context(
                 AccountResolutionError::ResolutionError("Failed to execute WebFinger request"),

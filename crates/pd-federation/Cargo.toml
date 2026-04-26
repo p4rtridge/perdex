@@ -9,6 +9,8 @@ pd-core = { workspace = true }
 pd-http = { workspace = true }
 
 error-stack = { workspace = true }
+http = { workspace = true }
+mime = { workspace = true }
 serde = { workspace = true }
 serde_with = { workspace = true }
 sonic-rs = { workspace = true }
@@ -17,12 +19,11 @@ typed-builder = { workspace = true }
 urlencoding = { workspace = true }
 
 [dev-dependencies]
-axum = { workspace = true }
-axum-server = { workspace = true }
 bytes = { workspace = true }
-rustls = { workspace = true }
-serde_test = { workspace = true }
+http-body-util = { workspace = true }
+hyper = { workspace = true }
 tokio = { workspace = true }
+tower = { workspace = true }
 
 [lints]
 workspace = true

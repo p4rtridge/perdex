@@ -10,15 +10,15 @@ use tower::BoxError;
 pin_project! {
     #[project = BodyProj]
     pub enum Body {
-        // Empty body
+        /// Empty body
         Empty,
 
-        // Full body
+        /// Full body
         Full {
             bytes: Option<Bytes>,
         },
 
-        // Body backed by a `StreamBody`
+        /// Body backed by a `StreamBody`
         Stream {
             #[pin]
             stream: StreamBody<BoxStream<'static, Result<Frame<Bytes>, BoxError>>>,
@@ -142,7 +142,6 @@ impl Default for Body {
 }
 
 impl fmt::Debug for Body {
-    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct(std::any::type_name::<Self>())
             .finish_non_exhaustive()
