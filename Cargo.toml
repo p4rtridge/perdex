@@ -3,6 +3,7 @@
 resolver = "3"
 members = [
     "app",
+    "crates/pd-ap-type",
     "crates/pd-blocking",
     "crates/pd-core",
     "crates/pd-federation",
@@ -18,6 +19,7 @@ license = "MIT"
 
 [workspace.dependencies]
 # Local dependencies
+pd-ap-type = { path = "crates/pd-ap-type" }
 pd-blocking = { path = "crates/pd-blocking" }
 pd-core = { path = "crates/pd-core" }
 pd-federation = { path = "crates/pd-federation" }

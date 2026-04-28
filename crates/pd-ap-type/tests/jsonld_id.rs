@@ -1,4 +1,4 @@
-use pd_federation::ap_type::jsonld;
+use pd_ap_type::jsonld;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_with::serde_as;
 

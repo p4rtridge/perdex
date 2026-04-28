@@ -1,13 +1,12 @@
 use error_stack::{Report, ResultExt};
 use http::{HeaderValue, Method, Request, StatusCode, header::ACCEPT};
+use pd_ap_type::webfinger::Resource;
 use pd_core::account::{
     model::{AccountResolutionError, AccountResource},
     traits::AccountResolver,
 };
 use pd_http::{Body, Client};
 use typed_builder::TypedBuilder;
-
-use crate::ap_type::webfinger::Resource;
 
 const ACCEPT_JRD_VALUE: HeaderValue = HeaderValue::from_static("application/jrd+json");
 const MAX_REDIRECTS: usize = 3;
