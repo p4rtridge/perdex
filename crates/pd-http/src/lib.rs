@@ -1,5 +1,5 @@
+use std::error::Error as StdError;
 use std::time::Duration;
-use std::{error::Error as StdError, sync::Arc};
 
 use bytes::Bytes;
 use http::{HeaderMap, Request, StatusCode};
@@ -52,9 +52,10 @@ const DEFAULT_USER_AGENT: &str = "pd-http/0.1.0"; // TODO: Use actual version
 /// - HTTP Signatures for request signing
 ///
 /// [`Client`] is cheap to clone and is designed to be shared across the application.
+/// Keep in mind that cloneing the client will perform deep clones of the default headers.
 #[derive(Clone)]
 pub struct Client {
-    default_headers: Arc<HeaderMap>,
+    default_headers: HeaderMap,
     svc: BoxCloneService<HyperRequest<Body>, HyperResponse<BoxBody>, BoxError>,
 }
 
@@ -103,11 +104,7 @@ impl Client {
 
     #[inline]
     fn prepare_request(&self, mut request: Request<Body>) -> Request<Body> {
-        request.headers_mut().extend(
-            self.default_headers
-                .iter()
-                .map(|(k, v)| (k.clone(), v.clone())),
-        );
+        request.headers_mut().extend(self.default_headers.clone());
         request
     }
 }
@@ -194,7 +191,7 @@ impl ClientBuilder {
         let service = BoxCloneService::new(service);
 
         Client {
-            default_headers: self.default_headers.into(),
+            default_headers: self.default_headers,
             svc: service,
         }
     }

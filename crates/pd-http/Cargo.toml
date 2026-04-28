@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+pd-ap-type = { workspace = true }
 pd-signature = { workspace = true }
 
 async-stream = { workspace = true }
