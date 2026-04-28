@@ -20,6 +20,7 @@ license = "MIT"
 # Local dependencies
 pd-blocking = { path = "crates/pd-blocking" }
 pd-core = { path = "crates/pd-core" }
+pd-federation = { path = "crates/pd-federation" }
 pd-http = { path = "crates/pd-http" }
 pd-signature = { path = "crates/pd-signature" }
 pd-telemetry = { path = "crates/pd-telemetry" }
@@ -28,9 +29,7 @@ async-stream = { version = "0.3" }
 axum = { version = "0.8.9" }
 base64-simd = { version = "0.8" }
 bytes = { version = "1.11", features = ["serde"] }
-const-oid = { version = "0.9.6", features = [
-    "db",
-] } # PKCS8 0.10 depends on const-oid 0.9.6
+const-oid = { version = "0.10", features = ["db"] }
 error-stack = { version = "0.7" }
 futures-util = { version = "0.3", default-features = false, features = [
     "async-await",
@@ -64,11 +63,11 @@ logos = { version = "0.16" }
 miette = { version = "7.6" }
 mime = { version = "0.3" }
 pin-project-lite = { version = "0.2" }
-pkcs8 = { version = "0.10", features = ["pem", "std"] }
+pkcs8 = { version = "0.11", features = ["pem", "std"] }
 rand = { version = "0.10" }
 rayon = { version = "1.12" }
 ring = { version = "0.17", features = ["std"] }
-rsa = { version = "0.10.0-rc.17" }
+rsa = { version = "0.10.0-rc.18" }
 serde = { version = "1.0", features = ["derive"] }
 serde_with = { version = "3" }
 simdutf8 = { version = "0.1" }

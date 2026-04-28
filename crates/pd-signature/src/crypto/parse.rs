@@ -2,7 +2,7 @@ use super::SigningKey as SigningKeyTrait;
 use const_oid::db::{rfc5912::RSA_ENCRYPTION, rfc8410::ID_ED_25519};
 use error_stack::Report;
 use pkcs8::{
-    DecodePrivateKey, Document, PrivateKeyInfo, SecretDocument, SubjectPublicKeyInfoRef,
+    DecodePrivateKey, Document, PrivateKeyInfoRef, SecretDocument, SubjectPublicKeyInfoRef,
     der::{Decode, asn1::OctetStringRef},
 };
 use ring::signature::{
@@ -77,19 +77,22 @@ pub fn public_key(der: &[u8]) -> Result<UnparsedPublicKey<Vec<u8>>, Report<Parse
 pub fn private_key(der: &[u8]) -> Result<SigningKey, Report<ParseError>> {
     let document = SecretDocument::from_pkcs8_der(der).map_err(ParseError::MalformedPkcs8)?;
     let pki = document
-        .decode_msg::<PrivateKeyInfo<'_>>()
+        .decode_msg::<PrivateKeyInfoRef<'_>>()
         .map_err(ParseError::MalformedDer)?;
 
     let signing_key = match pki.algorithm.oid {
-        RSA_ENCRYPTION => {
-            SigningKey::Rsa(RsaKeyPair::from_der(pki.private_key).map_err(ParseError::KeyRejected)?)
-        }
+        RSA_ENCRYPTION => SigningKey::Rsa(
+            RsaKeyPair::from_der(pki.private_key.as_bytes()).map_err(ParseError::KeyRejected)?,
+        ),
         ID_ED_25519 => SigningKey::Ed25519(
             Ed25519KeyPair::from_seed_and_public_key(
-                OctetStringRef::from_der(pki.private_key)
+                <&OctetStringRef>::from_der(pki.private_key.as_bytes())
                     .map_err(ParseError::MalformedDer)?
                     .as_bytes(),
-                pki.public_key.ok_or(ParseError::MalformedKey)?,
+                pki.public_key
+                    .ok_or(ParseError::MalformedKey)?
+                    .as_bytes()
+                    .ok_or(ParseError::MalformedKey)?,
             )
             .map_err(ParseError::KeyRejected)?,
         ),
