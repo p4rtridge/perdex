@@ -6,28 +6,28 @@ use pkcs8::{Document, SecretDocument};
 
 #[must_use]
 fn get_rsa_public_key() -> Vec<u8> {
-    let pem = include_str!("key/public_rsa.pem");
+    let pem = include_str!("../../../test-datas/keys/public_rsa.pem");
     let (_tag, document) = Document::from_pem(pem).unwrap();
     document.as_bytes().to_vec()
 }
 
 #[must_use]
 fn get_rsa_private_key() -> Vec<u8> {
-    let pem = include_str!("key/private_rsa.pem");
+    let pem = include_str!("../../../test-datas/keys/private_rsa.pem");
     let (_tag, document) = SecretDocument::from_pem(pem).unwrap();
     document.as_bytes().to_vec()
 }
 
 #[must_use]
 fn get_ed25519_public_key() -> Vec<u8> {
-    let pem = include_str!("key/public_ed25519.pem");
+    let pem = include_str!("../../../test-datas/keys/public_ed25519.pem");
     let (_tag, document) = Document::from_pem(pem).unwrap();
     document.as_bytes().to_vec()
 }
 
 #[must_use]
 fn get_ed25519_private_key() -> Vec<u8> {
-    let pem = include_str!("key/private_ed25519.pem");
+    let pem = include_str!("../../../test-datas/keys/private_ed25519.pem");
     let (_tag, document) = SecretDocument::from_pem(pem).unwrap();
     document.as_bytes().to_vec()
 }
