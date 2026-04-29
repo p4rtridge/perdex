@@ -1,48 +1,57 @@
-use pd_ap_type::jsonld;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_with::serde_as;
+
+use pd_federation::ap_type::jsonld;
 
 #[serde_as]
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 #[serde(bound = "T: Serialize, T: DeserializeOwned")]
-struct SetSkipNoneStruct<T> {
-    #[serde_as(as = "jsonld::serde::Set<_, jsonld::serde::SkipNone>")]
-    values: Vec<Option<T>>,
+struct SetStruct<T> {
+    #[serde_as(as = "jsonld::serde::Set")]
+    values: Vec<T>,
 }
 
 #[test]
 fn empty_sequence() {
     let de_json = r#"{"values":[]}"#;
-    let de: SetSkipNoneStruct<String> = sonic_rs::from_str(de_json).unwrap();
+    let de: SetStruct<String> = sonic_rs::from_str(de_json).unwrap();
     assert!(de.values.is_empty());
+
+    let de_null_json = r#"{"values":null}"#;
+    let de_null: SetStruct<String> = sonic_rs::from_str(de_null_json).unwrap();
+    assert!(de_null.values.is_empty());
 
     let ser = sonic_rs::to_string(&de).unwrap();
     assert_eq!(ser, r#"{"values":null}"#);
 }
 
 #[test]
-fn skips_null_elements() {
-    let de_json = r#"{"values":[null,"val1",null,"val2"]}"#;
-    let de: SetSkipNoneStruct<String> = sonic_rs::from_str(de_json).unwrap();
-    assert_eq!(
-        de.values,
-        vec![Some("val1".to_string()), Some("val2".to_string())]
-    );
+fn single_element() {
+    let json = r#"{"values":"value"}"#;
+    let de: SetStruct<String> = sonic_rs::from_str(json).unwrap();
+    assert_eq!(de.values, vec!["value"]);
 
-    let ser_data = SetSkipNoneStruct::<String> {
-        values: vec![None, Some("val1".to_string()), None],
-    };
-    let ser = sonic_rs::to_string(&ser_data).unwrap();
-    assert_eq!(ser, r#"{"values":["val1"]}"#);
+    let ser = sonic_rs::to_string(&de).unwrap();
+    assert_eq!(ser, r#"{"values":["value"]}"#);
+}
+
+#[test]
+fn sequence_of_elements() {
+    let json = r#"{"values":["val1","val2"]}"#;
+    let de: SetStruct<String> = sonic_rs::from_str(json).unwrap();
+    assert_eq!(de.values, vec!["val1", "val2"]);
+
+    let ser = sonic_rs::to_string(&de).unwrap();
+    assert_eq!(ser, json);
 }
 
 macro_rules! test_primitive {
     ($name:ident, $type:ty, $json:expr, $expected:expr) => {
         #[test]
         fn $name() {
-            let json = format!(r#"{{"values":[null, {}]}}"#, $json);
-            let de: SetSkipNoneStruct<$type> = sonic_rs::from_str(&json).unwrap();
-            assert_eq!(de.values, vec![Some($expected)]);
+            let json = format!(r#"{{"values":{}}}"#, $json);
+            let de: SetStruct<$type> = sonic_rs::from_str(&json).unwrap();
+            assert_eq!(de.values, vec![$expected]);
             let ser_json = format!(r#"{{"values":[{}]}}"#, $json);
             let ser = sonic_rs::to_string(&de).unwrap();
             assert_eq!(ser, ser_json);

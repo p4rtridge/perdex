@@ -12,10 +12,6 @@ pub enum HttpError {
     #[error("Failed to read response headers: {0}")]
     HeadersRead(#[source] BoxError),
 
-    /// Errors related to validating JSON-LD response bodies
-    #[error("Failed to validate JSON-LD response body: {0}")]
-    JsonldValidation(#[source] BoxError),
-
     /// Errors related to executing the HTTP request
     #[error("Failed to execute HTTP request: {0}")]
     RequestExecution(#[source] BoxError),

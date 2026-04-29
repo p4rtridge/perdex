@@ -1,6 +1,17 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+#[derive(Debug, Error)]
+pub enum AccountResolutionError {
+    /// The account was not found
+    #[error("Account not found")]
+    NotFound,
+
+    /// An error occurred during resolution
+    #[error("Failed to resolve account: {0}")]
+    ResolutionError(&'static str),
+}
+
 /// Description of a resolved account
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AccountResource {
@@ -13,12 +24,19 @@ pub struct AccountResource {
 }
 
 #[derive(Debug, Error)]
-pub enum AccountResolutionError {
-    /// The account was not found
-    #[error("Account not found")]
-    NotFound,
+pub enum AccountFetchError {
+    /// An error occurred during account fetching
+    #[error("Failed to fetch remote account: {0}")]
+    FetchError(&'static str),
+}
 
-    /// An error occurred during resolution
-    #[error("Failed to resolve account: {0}")]
-    ResolutionError(&'static str),
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RemoteAccountProfile {
+    pub uri: String,
+    pub domain: String,
+    pub username: String,
+    pub display_name: Option<String>,
+    pub summary: Option<String>,
+    pub avatar_url: Option<String>,
+    pub public_key: String,
 }

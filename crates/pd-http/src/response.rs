@@ -1,12 +1,10 @@
 use async_stream::try_stream;
 use bytes::{Buf, Bytes};
 use futures_util::{Stream, StreamExt};
-use http::{Extensions, HeaderMap, StatusCode, Uri, Version};
+use http::{Extensions, HeaderMap, StatusCode, Version};
 use http_body_util::{BodyExt, BodyStream};
 use hyper::Response as HyperResponse;
-use pd_ap_type::jsonld::RdfNode;
 use serde::de::DeserializeOwned;
-use tower::BoxError;
 use tower_http::follow_redirect::RequestUri;
 
 use crate::{
@@ -57,36 +55,6 @@ impl Response {
         sonic_rs::from_slice(&bytes).map_err(HttpError::JsonDeserialization)
     }
 
-    /// Read the body and deserialise it as JSON-LD node and verify the returned node's `@id`
-    pub async fn jsonld<T>(mut self) -> Result<T>
-    where
-        T: DeserializeOwned + RdfNode,
-    {
-        let Some(server_authority) = self
-            .extensions_mut()
-            .remove()
-            .and_then(|RequestUri(uri)| uri.authority().cloned())
-        else {
-            return Err(HttpError::HeadersRead(BoxError::from(
-                "Failed to get server authority",
-            )));
-        };
-
-        let node = self.json::<T>().await?;
-        if let Some(id) = node.id()
-            && Uri::try_from(id)
-                .map_err(|err| HttpError::JsonldValidation(BoxError::from(err)))?
-                .authority()
-                .is_none_or(|node_authority| *node_authority == server_authority)
-        {
-            return Err(HttpError::JsonldValidation(BoxError::from(
-                "Authority of `@id` doesn't belong to the originating server",
-            )));
-        }
-
-        Ok(node)
-    }
-
     /// Consumes the [`Response`] and returns a stream of response body chunks as [`Bytes`].
     pub async fn stream(self) -> impl Stream<Item = Result<Bytes>> {
         let mut body_stream = BodyStream::new(self.inner.into_body());
@@ -100,6 +68,15 @@ impl Response {
             }
         }
         .boxed()
+    }
+
+    /// Returns the authority of the request URI if available.
+    #[inline]
+    pub fn authority(&self) -> Option<&str> {
+        self.inner
+            .extensions()
+            .get::<RequestUri>()
+            .and_then(|RequestUri(uri)| uri.authority().map(|auth| auth.as_str()))
     }
 
     /// Returns a mutable reference to the associated extensions.

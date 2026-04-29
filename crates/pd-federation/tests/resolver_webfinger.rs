@@ -3,10 +3,11 @@ use std::convert::Infallible;
 use bytes::Bytes;
 use http_body_util::{Empty, Full};
 use hyper::{Request, Response};
-use pd_ap_type::webfinger::Resource;
 use pd_core::account::traits::AccountResolver;
 use pd_federation::resolver::webfinger::Webfinger;
 use pd_http::Client;
+
+use pd_federation::ap_type::webfinger::Resource;
 
 #[tokio::test]
 async fn basic() {

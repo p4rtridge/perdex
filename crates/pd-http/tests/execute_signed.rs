@@ -49,7 +49,7 @@ async fn test_execute_signed() {
         .body(Body::empty())
         .unwrap();
 
-    let private_key_pem = include_str!("../../../test-datas/keys/private_rsa.pem");
+    let private_key_pem = include_str!("../../../test-fixtures/keys/private_rsa.pem");
     let (_tag, document) = SecretDocument::from_pem(private_key_pem).unwrap();
 
     let response = client

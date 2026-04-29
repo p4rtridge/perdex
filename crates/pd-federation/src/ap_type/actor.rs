@@ -3,7 +3,7 @@ use serde_with::{serde_as, skip_serializing_none};
 use sonic_rs::Value;
 use time::OffsetDateTime;
 
-use crate::jsonld::RdfNode;
+use crate::ap_type::jsonld::RdfNode;
 
 use super::jsonld;
 
@@ -29,8 +29,8 @@ pub struct Actor {
     #[serde_as(as = "Option<jsonld::serde::FirstOk>")]
     pub name: Option<String>,
 
-    #[serde_as(as = "Option<jsonld::serde::FirstOk>")]
-    pub preferred_username: Option<String>,
+    #[serde_as(as = "jsonld::serde::FirstOk")]
+    pub preferred_username: String,
 
     #[serde(default)]
     #[serde_as(as = "jsonld::serde::FirstOk")]

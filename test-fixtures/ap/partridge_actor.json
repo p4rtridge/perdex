@@ -1,0 +1,96 @@
+{
+    "@context": [
+        "https://www.w3.org/ns/activitystreams",
+        "https://w3id.org/security/v1",
+        {
+            "manuallyApprovesFollowers": "as:manuallyApprovesFollowers",
+            "toot": "http://joinmastodon.org/ns#",
+            "featured": {
+                "@id": "toot:featured",
+                "@type": "@id"
+            },
+            "featuredTags": {
+                "@id": "toot:featuredTags",
+                "@type": "@id"
+            },
+            "alsoKnownAs": {
+                "@id": "as:alsoKnownAs",
+                "@type": "@id"
+            },
+            "movedTo": {
+                "@id": "as:movedTo",
+                "@type": "@id"
+            },
+            "schema": "http://schema.org#",
+            "PropertyValue": "schema:PropertyValue",
+            "value": "schema:value",
+            "discoverable": "toot:discoverable",
+            "Device": "toot:Device",
+            "Ed25519Signature": "toot:Ed25519Signature",
+            "Ed25519Key": "toot:Ed25519Key",
+            "Curve25519Key": "toot:Curve25519Key",
+            "EncryptedMessage": "toot:EncryptedMessage",
+            "publicKeyBase64": "toot:publicKeyBase64",
+            "deviceId": "toot:deviceId",
+            "claim": {
+                "@type": "@id",
+                "@id": "toot:claim"
+            },
+            "fingerprintKey": {
+                "@type": "@id",
+                "@id": "toot:fingerprintKey"
+            },
+            "identityKey": {
+                "@type": "@id",
+                "@id": "toot:identityKey"
+            },
+            "devices": {
+                "@type": "@id",
+                "@id": "toot:devices"
+            },
+            "messageFranking": "toot:messageFranking",
+            "messageType": "toot:messageType",
+            "cipherText": "toot:cipherText",
+            "suspended": "toot:suspended",
+            "Emoji": "toot:Emoji",
+            "focalPoint": {
+                "@container": "@list",
+                "@id": "toot:focalPoint"
+            }
+        }
+    ],
+    "id": "https://mastodon.com/users/partridge",
+    "type": "Person",
+    "following": "https://mastodon.com/users/partridge/following",
+    "followers": "https://mastodon.com/users/partridge/followers",
+    "inbox": "https://mastodon.com/users/partridge/inbox",
+    "outbox": "https://mastodon.com/users/partridge/outbox",
+    "featured": "https://mastodon.com/users/partridge/collections/featured",
+    "featuredTags": "https://mastodon.com/users/partridge/collections/tags",
+    "preferredUsername": "partridge",
+    "name": "Partridge (partridge)",
+    "summary": "Capitalism never worked and will never work, and we all suffer under its consequences.\u003c/p\u003e",
+    "url": "https://mastodon.com/@partridge",
+    "manuallyApprovesFollowers": false,
+    "discoverable": true,
+    "published": "2024-12-12T00:00:00Z",
+    "devices": "https://mastodon.com/users/partridge/collections/devices",
+    "publicKey": {
+        "id": "https://mastodon.com/users/partridge#main-key",
+        "owner": "https://mastodon.com/users/partridge",
+        "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAx7uMw/uzSKY67HdzVhmb\nMbtnblDBtw8K/T0RqxrevvTYgWSvDsEQuF41iMWWfsQkBlZQms74l9frqMulkgFM\ngaKNtkMfchkX2NbZBHt960WJ0WICIa6vEdNVHX+MFOPCLCtwAWFO8pbTFkGa45kR\nPohWlFvxjcMbhRIbG4tXkOfOcDy5HXE6J54jqdtT/xqwyln6p12oo6RohT/Ook6n\nzkG7E91ANXFty5vtJCtReh7TX5UC8A2ULDspWxerO2BONT5nas2zXovaRxdbEzFZ\nbHJ3H7jQwM/FVtC9W41iLq5BDj3glujc5vNuEOGBOH3BkIlQ2TFPhu8w0TRSS0Th\n3QIDAQAB\n-----END PUBLIC KEY-----\n"
+    },
+    "endpoints": {
+        "sharedInbox": "https://mastodon.com/inbox"
+    },
+    "icon": {
+        "type": "Image",
+        "mediaType": "image/png",
+        "url": "https://mastodon.com/system/accounts/avatars/109/498/135/552/865/207/original/8496a7872f7e92c9.png"
+    },
+    "image": {
+        "type": "Image",
+        "mediaType": "image/webp",
+        "url": "https://mastodon.com/system/accounts/headers/109/498/135/552/865/207/original/40cc6375eb333170.webp"
+    }
+}

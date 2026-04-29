@@ -1451,16 +1451,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pd-ap-type"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_with",
- "sonic-rs",
- "time",
-]
-
-[[package]]
 name = "pd-blocking"
 version = "0.1.0"
 dependencies = [
@@ -1489,13 +1479,17 @@ dependencies = [
  "http-body-util",
  "hyper",
  "mime",
- "pd-ap-type",
  "pd-core",
  "pd-http",
+ "serde",
+ "serde_with",
  "sonic-rs",
+ "thiserror",
+ "time",
  "tokio",
  "tower",
  "typed-builder",
+ "url",
  "urlencoding",
 ]
 
@@ -1514,7 +1508,6 @@ dependencies = [
  "hyper",
  "hyper-rustls",
  "hyper-util",
- "pd-ap-type",
  "pd-signature",
  "pin-project-lite",
  "pkcs8",
