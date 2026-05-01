@@ -8,6 +8,7 @@ license.workspace = true
 pd-core = { workspace = true }
 pd-http = { workspace = true }
 
+bubble-bath = { workspace = true }
 error-stack = { workspace = true }
 http = { workspace = true }
 mime = { workspace = true }

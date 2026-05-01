@@ -28,6 +28,7 @@ pd-telemetry = { path = "crates/pd-telemetry" }
 async-stream = { version = "0.3" }
 axum = { version = "0.8.9" }
 base64-simd = { version = "0.8" }
+bubble-bath = { version = "0.2" }
 bytes = { version = "1.11", features = ["serde"] }
 const-oid = { version = "0.10", features = ["db"] }
 error-stack = { version = "0.7" }

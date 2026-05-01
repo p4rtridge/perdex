@@ -24,7 +24,7 @@ pub struct Actor {
     pub id: String,
 
     #[serde_as(as = "jsonld::serde::FirstOk")]
-    pub r#type: String,
+    pub r#type: ActorType,
 
     #[serde_as(as = "Option<jsonld::serde::FirstOk>")]
     pub name: Option<String>,

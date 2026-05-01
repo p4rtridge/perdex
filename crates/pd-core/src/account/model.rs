@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::PublicKey;
+
 #[derive(Debug, Error)]
 pub enum AccountResolutionError {
     /// The account was not found
@@ -38,5 +40,5 @@ pub struct RemoteAccountProfile {
     pub display_name: Option<String>,
     pub summary: Option<String>,
     pub avatar_url: Option<String>,
-    pub public_key: String,
+    pub public_key: PublicKey,
 }

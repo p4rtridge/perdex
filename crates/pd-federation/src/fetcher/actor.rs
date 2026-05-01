@@ -1,17 +1,26 @@
 use error_stack::{Report, ResultExt};
 
-use pd_core::account::{
-    model::{AccountFetchError, RemoteAccountProfile},
-    traits::{AccountFetcher, AccountResolver},
+use pd_core::{
+    PublicKey,
+    account::{
+        model::{AccountFetchError, RemoteAccountProfile},
+        traits::{AccountFetcher, AccountResolver},
+    },
 };
 use url::Url;
 
-use crate::{ap_type::actor::Actor, fetcher::Fetcher};
+use crate::{ap_type::actor::Actor, fetcher::Fetcher, utils::sanitizer::SanitizeExt};
 
 impl<R> AccountFetcher for Fetcher<R>
 where
     R: AccountResolver,
 {
+    /// Fetches an ActivityPub Actor profile from the given URL
+    ///
+    /// It guarantees the following security checks:
+    /// - The authority of the fetched '@id' must match the server authority to prevent SSRF attacks.
+    /// - If an `acct` is provided, it must match the fetched `preferredUsername` and domain.
+    /// - If the resolver is used, the resolved account's URI must match the Actor ID to prevent impersonation.
     async fn fetch_account(
         &self,
         url: &str,
@@ -33,6 +42,8 @@ where
         let mut domain = actor_url.host_str().ok_or(AccountFetchError::FetchError(
             "Missing host component in url input",
         ))?;
+        // We don't use the resolver if the acct matches the actor's preferredUsername and domain
+        // (if acct is provided, it might come from webfinger resolution in previous steps)
         let try_resolver = acct.is_none_or(|acct| acct != (&actor.preferred_username, domain));
 
         let domain_buf;
@@ -46,6 +57,7 @@ where
             match resolved_account {
                 Some(resource) => {
                     if resource.uri == actor.id {
+                        // Canonicalize preferred username and domain
                         actor.preferred_username = resource.username;
                         domain_buf = resource.domain;
                         domain = &domain_buf;
@@ -75,14 +87,23 @@ where
             ))?;
         }
 
+        actor.clean_html();
+
+        // Yes, we still haven't handled icon yet
+        // TODO: handle icon and avatar (which may be different in some implementations)
+
         let remote_account = RemoteAccountProfile {
             uri: actor.id,
             domain: domain.to_string(),
             username: actor.preferred_username,
             display_name: actor.name,
-            public_key: actor.public_key.public_key_pem, // TODO: handle missing public key or unsupported formats
-            avatar_url: None, // TODO: extract from Actor's `icon` property
-            summary: None,    // TODO: extract from Actor's `summary` property
+            summary: None,
+            avatar_url: None,
+            public_key: PublicKey {
+                id: actor.public_key.id,
+                owner: actor.public_key.owner,
+                public_key_pem: actor.public_key.public_key_pem,
+            },
         };
         Ok(Some(remote_account))
     }

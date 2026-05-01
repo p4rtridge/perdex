@@ -40,6 +40,8 @@ where
     R: AccountResolver,
 {
     /// Fetches an ActivityPub resource from the given URL and attempts to parse it as type `T`.
+    ///
+    /// The authority of '@id' must match the server authority to prevent SSRF attacks.
     async fn fetch_ap_resource<T>(&self, url: &str) -> Result<Option<T>, Report<FetcherError>>
     where
         T: DeserializeOwned + RdfNode,
