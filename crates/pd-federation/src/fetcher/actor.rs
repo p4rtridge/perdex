@@ -77,7 +77,6 @@ where
             false
         };
 
-        // TODO: add comment about why we need to re-parse the Actor ID as a URL if we used the resolver
         if !used_resolver && actor.id != actor_url.as_str() {
             actor_url = Url::parse(&actor.id).change_context(AccountFetchError::FetchError(
                 "Failed to parse Actor ID as URL",

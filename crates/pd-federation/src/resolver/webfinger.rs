@@ -23,13 +23,17 @@ impl AccountResolver for Webfinger {
         username: &str,
         domain: &str,
     ) -> Result<Option<AccountResource>, Report<AccountResolutionError>> {
+        // Preserve the original acct for redirect loops for trace later
         let original_acct = format!("acct:{}@{domain}", urlencoding::encode(username));
 
         let mut acct_buf: String;
         let mut acct = original_acct.as_str();
 
+        let mut username = username;
+        let mut domain = domain;
+
         let mut remaining_redirects = MAX_REDIRECTS;
-        let (subject, links) = loop {
+        let links = loop {
             let webfinger_uri = format!("https://{domain}/.well-known/webfinger?resource={acct}");
 
             let request = Request::builder()
@@ -49,7 +53,7 @@ impl AccountResolver for Webfinger {
                 AccountResolutionError::ResolutionError("Failed to parse WebFinger response"),
             )?;
             if resource.subject == acct {
-                break (resource.subject, resource.links);
+                break resource.links;
             }
 
             // Start over on account resolution if there's a subject redirect
@@ -60,15 +64,17 @@ impl AccountResolver for Webfinger {
             acct_buf = resource.subject;
             acct = acct_buf.as_str();
 
+            let Some(username_domain) = acct
+                .strip_prefix("acct:")
+                .and_then(|acct| acct.split_once('@'))
+            else {
+                return Ok(None);
+            };
+            (username, domain) = username_domain;
+
             remaining_redirects -= 1;
         };
 
-        let Some((username, domain)) = subject
-            .strip_prefix("acct:")
-            .and_then(|acct| acct.split_once('@'))
-        else {
-            return Ok(None);
-        };
         let Some(uri) = links
             .into_iter()
             .find_map(|link| (link.rel == "self").then_some(link.href?))

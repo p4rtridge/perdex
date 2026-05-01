@@ -19,7 +19,7 @@ async fn basic() {
         let resource = resource.next().unwrap();
         assert_eq!(resource, "acct:partridge@example.org");
 
-        let base = include_bytes!("datas/webfinger/partridge_jrd.json");
+        let base = include_bytes!("../../../test-fixtures/ap/partridge_jrd.json");
         let body = sonic_rs::json!(&Resource {
             subject: "acct:partridge@example.org".to_string(),
             ..sonic_rs::from_slice(base).unwrap()
@@ -59,7 +59,7 @@ async fn redirect_unbounded() {
             panic!("Unexpected resource format");
         };
 
-        let base = include_bytes!("datas/webfinger/partridge_jrd.json");
+        let base = include_bytes!("../../../test-fixtures/ap/partridge_jrd.json");
         let body = sonic_rs::json!(&Resource {
             subject: format!("acct:partridge_{}@example.org", count + 1),
             ..sonic_rs::from_slice(base).unwrap()
@@ -154,7 +154,7 @@ async fn invalid_acct_returns_none() {
     let svc = tower::service_fn(|request: Request<_>| {
         assert_eq!(request.uri().path(), "/.well-known/webfinger");
 
-        let base = include_bytes!("datas/webfinger/partridge_jrd.json");
+        let base = include_bytes!("../../../test-fixtures/ap/partridge_jrd.json");
         let body = sonic_rs::json!(&Resource {
             subject: "invalid".to_string(),
             ..sonic_rs::from_slice(base).unwrap()
@@ -188,7 +188,7 @@ async fn no_self_link_returns_none() {
         let resource = resource.next().unwrap();
         assert_eq!(resource, "acct:no_self_link@example.org");
 
-        let base = include_bytes!("datas/webfinger/partridge_jrd.json");
+        let base = include_bytes!("../../../test-fixtures/ap/partridge_jrd.json");
         let mut body: Resource = sonic_rs::from_slice(base).unwrap();
         body.subject = resource.to_string();
         body.links.clear();

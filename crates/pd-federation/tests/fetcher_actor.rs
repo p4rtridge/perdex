@@ -4,7 +4,9 @@ use bytes::Bytes;
 use http::{Request, Response, StatusCode, header::CONTENT_TYPE};
 use http_body_util::Full;
 use pd_core::account::traits::AccountFetcher;
-use pd_federation::{fetcher::Fetcher, resolver::webfinger::Webfinger};
+use pd_federation::{
+    ap_type::webfinger::Resource, fetcher::Fetcher, resolver::webfinger::Webfinger,
+};
 use pd_http::Client;
 
 #[tokio::test]
@@ -48,7 +50,7 @@ async fn basic() {
         .unwrap();
 
     assert_eq!(actor.uri, "https://mastodon.com/users/partridge");
-    assert_eq!(actor.username, "partridge :uwu:");
+    assert_eq!(actor.username, "partridge");
     assert_eq!(actor.domain, "mastodon.com");
 }
 
@@ -140,4 +142,62 @@ async fn check_ap_content_type() {
     assert!(
         err_msg.contains("Invalid Content-Type in response") || err_msg.contains("Content-Type")
     );
+}
+
+#[tokio::test]
+async fn fetch_account_with_custom_acct() {
+    let svc = tower::service_fn(|request: Request<_>| async move {
+        let jrd_body = include_str!("../../../test-fixtures/ap/partridge_jrd.json");
+        let jrd_body = sonic_rs::to_string(&Resource {
+            subject: "acct:partridge@example.com".to_string(),
+            ..sonic_rs::from_slice(jrd_body.as_bytes()).unwrap()
+        })
+        .unwrap();
+
+        match (
+            request.uri().authority().unwrap().as_str(),
+            request.uri().path_and_query().unwrap().as_str(),
+        ) {
+            ("example.com", "/.well-known/webfinger?resource=acct:partridge@example.com")
+            | ("mastodon.com", "/.well-known/webfinger?resource=acct:partridge@mastodon.com") => {
+                Ok::<_, Infallible>(
+                    Response::builder()
+                        .header(CONTENT_TYPE, "application/activity+json")
+                        .body(Full::<Bytes>::new(jrd_body.into()))
+                        .unwrap(),
+                )
+            }
+            ("mastodon.com", "/users/partridge") => {
+                let body = include_str!("../../../test-fixtures/ap/partridge_actor.json");
+
+                Ok::<_, Infallible>(
+                    Response::builder()
+                        .header(CONTENT_TYPE, "application/activity+json")
+                        .body(Full::<Bytes>::new(body.into()))
+                        .unwrap(),
+                )
+            }
+            path => panic!("HTTP client hit unexpected route: {path:?}"),
+        }
+    });
+
+    let http_client = Client::builder().service(svc);
+    let webfinger = Webfinger::builder()
+        .http_client(http_client.clone())
+        .build();
+
+    let fetcher = Fetcher::builder()
+        .http_client(http_client)
+        .resolver(webfinger)
+        .build();
+
+    let actor = fetcher
+        .fetch_account("https://mastodon.com/users/partridge", None)
+        .await
+        .expect("Failed to fetch actor")
+        .unwrap();
+
+    assert_eq!(actor.uri, "https://mastodon.com/users/partridge");
+    assert_eq!(actor.username, "partridge");
+    assert_eq!(actor.domain, "example.com");
 }
