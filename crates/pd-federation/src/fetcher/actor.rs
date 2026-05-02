@@ -16,75 +16,59 @@ where
     R: AccountResolver,
 {
     /// Fetches an ActivityPub Actor profile from the given URL
-    ///
-    /// It guarantees the following security checks:
-    /// - The authority of the fetched '@id' must match the server authority to prevent SSRF attacks.
-    /// - If an `acct` is provided, it must match the fetched `preferredUsername` and domain.
-    /// - If the resolver is used, the resolved account's URI must match the Actor ID to prevent impersonation.
     async fn fetch_account(
         &self,
         url: &str,
         acct: Option<(&str, &str)>,
     ) -> Result<Option<RemoteAccountProfile>, Report<AccountFetchError>> {
-        let mut actor_url = Url::parse(url)
-            .change_context(AccountFetchError::FetchError("Failed to parse url input"))?;
-
-        let Some(mut actor) = self
-            .fetch_ap_resource::<Actor>(actor_url.as_str())
-            .await
-            .change_context(AccountFetchError::FetchError(
-                "Failed to fetch actor resource",
-            ))?
+        let Some(mut actor) = self.fetch_ap_resource::<Actor>(url).await.change_context(
+            AccountFetchError::FetchError("Failed to fetch actor resource"),
+        )?
         else {
             return Ok(None);
         };
 
-        let mut domain = actor_url.host_str().ok_or(AccountFetchError::FetchError(
-            "Missing host component in url input",
+        let canonical_url = Url::parse(&actor.id).change_context(AccountFetchError::FetchError(
+            "Failed to parse Actor ID as URL",
         ))?;
-        // We don't use the resolver if the acct matches the actor's preferredUsername and domain
-        // (if acct is provided, it might come from webfinger resolution in previous steps)
+        let mut domain = canonical_url
+            .host_str()
+            .ok_or(AccountFetchError::FetchError(
+                "Missing host component in Actor ID",
+            ))?;
         let try_resolver = acct.is_none_or(|acct| acct != (&actor.preferred_username, domain));
 
         let domain_buf;
-        let used_resolver = if try_resolver {
+        if try_resolver {
             let resolved_account = self
                 .resolver
                 .resolve_account(&actor.preferred_username, domain)
                 .await
                 .change_context(AccountFetchError::FetchError("Failed to resolve account"))?;
 
-            match resolved_account {
-                Some(resource) => {
-                    if resource.uri == actor.id {
-                        // Canonicalize preferred username and domain
-                        actor.preferred_username = resource.username;
-                        domain_buf = resource.domain;
-                        domain = &domain_buf;
-                        true
-                    } else {
-                        return Err(Report::new(AccountFetchError::FetchError(
-                            "Resolved account URI does not match Actor ID",
-                        )));
-                    }
+            // If None then we fall back to `{preferredUsername}@{domain}`
+            if let Some(resource) = resolved_account {
+                if resource.uri != actor.id {
+                    return Err(Report::new(AccountFetchError::FetchError(
+                        "Resolved account URI does not match Actor ID",
+                    )));
                 }
-                _ => {
-                    // Fall back to `{preferredUsername}@{domain}`
-                    false
-                }
+
+                // Canonicalize preferred username and domain
+                actor.preferred_username = resource.username;
+                domain_buf = resource.domain;
+                domain = &domain_buf;
             }
-        } else {
-            false
         };
 
-        if !used_resolver && actor.id != actor_url.as_str() {
-            actor_url = Url::parse(&actor.id).change_context(AccountFetchError::FetchError(
-                "Failed to parse Actor ID as URL",
-            ))?;
-            domain = actor_url.host_str().ok_or(AccountFetchError::FetchError(
-                "Missing host component in Actor ID",
-            ))?;
-        }
+        // if !used_resolver && actor.id != actor_url.as_str() {
+        //     actor_url = Url::parse(&actor.id).change_context(AccountFetchError::FetchError(
+        //         "Failed to parse Actor ID as URL",
+        //     ))?;
+        //     domain = actor_url.host_str().ok_or(AccountFetchError::FetchError(
+        //         "Missing host component in Actor ID",
+        //     ))?;
+        // }
 
         actor.clean_html();
 
